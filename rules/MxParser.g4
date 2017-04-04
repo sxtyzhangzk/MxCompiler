@@ -5,9 +5,10 @@ options
     tokenVocab = MxLexer;
 }
 
-exprList: expr (Comma expr)*;
+exprList: (expr (Comma expr)*)?;
+exprNewDim: OpenSqu expr? CloseSqu;
 
-subexprPrimary: Id
+exprPrimary: Id
     | String
     | IntegerDec
     | True
@@ -18,11 +19,11 @@ subexprPrimary: Id
     ;
 
 exprPar: OpenPar expr ClosePar;
-subexprPostfix: subexprPrimary                 #subexpr0
+subexprPostfix: exprPrimary                    #subexpr0
     | subexprPostfix Increment                 #exprIncrementPostfix
     | subexprPostfix Decrement                 #exprDecrementPostfix
     | subexprPostfix Dot Id                    #exprMember
-    | subexprPostfix OpenPar exprList? ClosePar #exprFuncCall
+    | subexprPostfix OpenPar exprList ClosePar #exprFuncCall
     | subexprPostfix OpenSqu expr CloseSqu     #exprSubscript
     ;
 
@@ -33,7 +34,7 @@ subexprPrefix: subexprPostfix      #subexpr1
     | Minus subexprPrefix          #exprNegative
     | Not subexprPrefix            #exprNot
     | BitNot subexprPrefix         #exprBitNot  
-    | New (typeInternal | Id) ((OpenPar exprList? ClosePar) | (OpenSqu expr? CloseSqu)*)  #exprNew
+    | New typeNotArray ((OpenPar exprList ClosePar) | (exprNewDim)*)  #exprNew
     ;
 subexprMultiDiv: subexprPrefix              #subexpr2
     | subexprMultiDiv Multi subexprPrefix   #exprMulti
@@ -87,15 +88,21 @@ typeInternal: IntType
     | BoolType
     ;
 
-type: (typeInternal | Id) (OpenSqu CloseSqu)*;
+typeNotArray: (typeInternal | Id);
+type: typeNotArray (OpenSqu CloseSqu)*;
 
 varDecl: type Id (Assign expr)? (Comma Id (Assign expr)?)* Semicolon;
-paramList: type Id (Comma type Id)*;
-funcDecl: (type | Void)? Id OpenPar paramList? ClosePar block;
+paramList: (type Id (Comma type Id)*)?;
+funcDecl: (type | Void)? Id OpenPar paramList ClosePar block;
 memberList: (varDecl | funcDecl)*;
 classDecl: Class Id OpenCurly memberList CloseCurly;
 if_statement: If OpenPar expr ClosePar statement (Else statement)?;
-for_statement: For OpenPar (varDecl | expr? Semicolon) expr? Semicolon expr? ClosePar statement;
+
+for_exprIn: (varDecl | expr? Semicolon);
+for_exprCond: expr? Semicolon;
+for_exprStep: expr?;
+for_statement: For OpenPar for_exprIn for_exprCond for_exprStep ClosePar statement;
+
 while_statement: While OpenPar expr ClosePar statement;
 statement: block | if_statement | for_statement | while_statement | varDecl | ((expr | Continue | Break | Return expr?)? Semicolon);
 block: OpenCurly statement* CloseCurly;
