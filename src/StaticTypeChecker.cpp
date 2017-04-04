@@ -195,10 +195,10 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 	///////////////////////////////////////////////////
 
 	auto iter = mapLocalVar.find(declVar->varName);
+	auto &curBlock = stkCurrentBlockVar.top();
 	if (iter != mapLocalVar.end())
 	{
 		size_t oldVarId = iter->second.top();
-		auto &curBlock = stkCurrentBlockVar.top();
 		if (curBlock.find(oldVarId) != curBlock.end())
 		{
 			issues->error(declVar->tokenL, declVar->tokenR,
@@ -206,7 +206,6 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 			return declVar;
 		}
 		declVar->varID = vLocalVar.size();
-		curBlock.insert(declVar->varID);
 		iter->second.push(declVar->varID);
 	}
 	else
@@ -216,6 +215,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 		tmp.push(declVar->varID);
 		mapLocalVar.insert({ declVar->varName, std::move(tmp) });
 	}
+	curBlock.insert(declVar->varID);
 	vLocalVar.push_back(MemberTable::varInfo{ declVar->varName, declVar->varType });
 	return declVar;
 }
@@ -229,7 +229,11 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTBlock *block)
 ASTNode * StaticTypeChecker::leave(MxAST::ASTBlock *block)
 {
 	for (size_t i : stkCurrentBlockVar.top())
+	{
 		mapLocalVar[vLocalVar[i].varName].pop();
+		if (mapLocalVar[vLocalVar[i].varName].empty())
+			mapLocalVar.erase(vLocalVar[i].varName);
+	}
 	stkCurrentBlockVar.pop();
 	return block;
 }
