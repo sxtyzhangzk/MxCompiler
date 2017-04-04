@@ -27,7 +27,7 @@ public:
 	
 public:
 	IssueCollector() : printLevel(FATAL), printTarget(nullptr), tokenStream(nullptr), cntError(0) {}
-	IssueCollector::IssueCollector(issueLevel printLevel, std::ostream *printTarget, const antlr4::TokenStream *tokenStream, const std::string &fileName);
+	IssueCollector(issueLevel printLevel, std::ostream *printTarget, const antlr4::TokenStream *tokenStream, const std::string &fileName);
 
 	void notice(ssize_t tokenL, ssize_t tokenR, const std::string &description);
 	void warning(ssize_t tokenL, ssize_t tokenR, const std::string &description);

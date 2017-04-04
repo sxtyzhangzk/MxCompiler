@@ -23,7 +23,7 @@ protected:
 		return ret;
 	}
 	antlrcpp::Any visitPrefixUnaryExpr(antlr4::ParserRuleContext *ctx, MxAST::ASTExprUnary::Operator oper);
-	antlrcpp::Any ASTConstructor::visitBinaryExpr(antlr4::ParserRuleContext *ctx, MxAST::ASTExprBinary::Operator oper);
+	antlrcpp::Any visitBinaryExpr(antlr4::ParserRuleContext *ctx, MxAST::ASTExprBinary::Operator oper);
 
 	MxType getType(MxParser::TypeNotArrayContext *ctx);
 	MxType getType(MxParser::TypeContext *ctx);

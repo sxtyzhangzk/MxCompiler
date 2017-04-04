@@ -386,7 +386,7 @@ namespace MxAST
 		ASTExprImm() {}
 		ASTExprImm(bool bvalue) : ASTExpr(MxType{ MxType::Bool }) { exprVal.bvalue = bvalue; }
 		ASTExprImm(int ivalue) : ASTExpr(MxType{ MxType::Integer }) { exprVal.ivalue = ivalue; }
-		ASTExprImm(nullptr_t) : ASTExpr(MxType{ MxType::Object, 0, size_t(-1) }) {}
+		ASTExprImm(std::nullptr_t) : ASTExpr(MxType{ MxType::Object, 0, size_t(-1) }) {}
 	};
 
 	class ASTExprVar : public ASTExpr
