@@ -13,11 +13,12 @@ class StaticTypeChecker : public MxAST::ASTListener
 {
 public:
 	StaticTypeChecker(MemberTable *memTable, GlobalSymbol *symbols, IssueCollector *issues);
-	void preCheck(MxAST::ASTRoot *root);
+	bool preCheck(MxAST::ASTRoot *root);
 
 protected:
 	bool checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable);
 	bool checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable);
+	bool checkType(MxType type, ssize_t tokenL, ssize_t tokenR);
 
 	virtual MxAST::ASTNode * enter(MxAST::ASTDeclClass *declClass) override;
 	virtual MxAST::ASTNode * leave(MxAST::ASTDeclClass *declClass) override;

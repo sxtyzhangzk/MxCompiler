@@ -16,30 +16,35 @@ StaticTypeChecker::StaticTypeChecker(MemberTable *memTable, GlobalSymbol *symbol
 	}
 }
 
-void StaticTypeChecker::preCheck(ASTRoot *root)
+bool StaticTypeChecker::preCheck(ASTRoot *root)
 {
+	bool flag = true;
+	for (auto &classNode : root->nodes)
+	{
+		ASTDeclClass *declClass = dynamic_cast<ASTDeclClass *>(classNode.get());
+		if (!declClass)
+			continue;
+		if (mapClassMemberId.find(declClass->className) != mapClassMemberId.end())
+		{
+			issues->error(declClass->tokenL, declClass->tokenR,
+				"Redefinition of class '" + symbols->vSymbol[declClass->className] + "'");
+			flag = false;
+			continue;
+		}
+		mapClassMemberId.insert({ declClass->className, std::map<size_t, size_t>() });
+		memTable->vClassMembers.insert({ declClass->className, std::vector<MemberTable::varInfo>() });
+	}
+	if (!flag)
+		return false;
+	flag = true;
+
 	for (auto &classNode : root->nodes)
 	{
 		ASTDeclClass *declClass = dynamic_cast<ASTDeclClass *>(classNode.get());
 		if (declClass)
 		{
-			if (mapClassMemberId.find(declClass->className) != mapClassMemberId.end())
-			{
-				issues->error(declClass->tokenL, declClass->tokenR,
-					"Redefinition of class '" + symbols->vSymbol[declClass->className] + "'");
-				continue;
-			}
-
-			//// SAME class name & var name is not allowed ////
-			if (mapGlobalVar.find(declClass->className) != mapGlobalVar.end())
-			{
-				issues->error(declClass->tokenL, declClass->tokenR,
-					"class and global variable using the same name is not allowed");
-			}
-			///////////////////////////////////////////////////
-
-			std::map<size_t, size_t> mapVarId;	//var name -> var id
-			std::vector<MemberTable::varInfo> varTable;
+			std::map<size_t, size_t> &mapVarId = mapClassMemberId[declClass->className];	//var name -> var id
+			std::vector<MemberTable::varInfo> &varTable = memTable->vClassMembers[declClass->className];
 			for (auto &memFunc : declClass->vMemFuncs)
 			{
 				ASTDeclFunc *declFunc = dynamic_cast<ASTDeclFunc *>(memFunc.get());
@@ -51,19 +56,20 @@ void StaticTypeChecker::preCheck(ASTRoot *root)
 				{
 					issues->error(declClass->tokenL, declClass->tokenR,
 						"class and global variable using the same name is not allowed");
+					flag = false;
 				}
 				///////////////////////////////////////////////////
 
-				checkFunc(declFunc, mapVarId, varTable);
+				if (!checkFunc(declFunc, mapVarId, varTable))
+					flag = false;
 			}
 			for (auto &memVar : declClass->vMemVars)
 			{
 				ASTDeclVar *declVar = dynamic_cast<ASTDeclVar *>(memVar.get());
 				assert(declVar);
-				checkVar(declVar, mapVarId, varTable);
+				if (!checkVar(declVar, mapVarId, varTable))
+					flag = false;
 			}
-			mapClassMemberId.insert({ declClass->className, std::move(mapVarId) });
-			memTable->vClassMembers.insert({ declClass->className, std::move(varTable) });
 			continue;
 		}
 		ASTDeclFunc *declFunc = dynamic_cast<ASTDeclFunc *>(classNode.get());
@@ -74,21 +80,29 @@ void StaticTypeChecker::preCheck(ASTRoot *root)
 			{
 				issues->error(declClass->tokenL, declClass->tokenR,
 					"class and global variable using the same name is not allowed");
+				flag = false;
 			}
 			///////////////////////////////////////////////////
-			checkFunc(declFunc, mapGlobalVar, memTable->vGlobalVars);
+			if (!checkFunc(declFunc, mapGlobalVar, memTable->vGlobalVars))
+				flag = false;
 		}
 	}
 	memTable->vLocalVars.resize(memTable->vFuncs.size());
+	return flag;
 }
 
 bool StaticTypeChecker::checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable)
 {
+	if (!checkType(declFunc->retType, declFunc->tokenL, declFunc->tokenR))
+		return false;
+
 	std::vector<MxType> thisParamType;
 	for (auto &node : declFunc->param)
 	{
 		ASTDeclVar *dVar = dynamic_cast<ASTDeclVar *>(node.get());
 		assert(dVar);
+		if (!checkType(dVar->varType, dVar->tokenL, dVar->tokenR))
+			return false;
 		thisParamType.push_back(dVar->varType);
 	}
 
@@ -125,6 +139,9 @@ bool StaticTypeChecker::checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t,
 
 bool StaticTypeChecker::checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable)
 {
+	if (!checkType(declVar->varType, declVar->tokenL, declVar->tokenR))
+		return false;
+
 	auto iter = mapVarId.find(declVar->varName);
 	if (iter != mapVarId.end())
 	{
@@ -135,6 +152,20 @@ bool StaticTypeChecker::checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, si
 	declVar->varID = varTable.size();
 	mapVarId.insert({ declVar->varName, declVar->varID });
 	varTable.push_back(MemberTable::varInfo{ declVar->varName, declVar->varType });
+	return true;
+}
+
+bool StaticTypeChecker::checkType(MxType type, ssize_t tokenL, ssize_t tokenR)
+{
+	if (type.mainType == MxType::Object)
+	{
+		if (mapClassMemberId.find(type.className) == mapClassMemberId.end())
+		{
+			issues->error(tokenL, tokenR,
+				"unrecognized symbol '" + symbols->vSymbol[type.className] + "'");
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -193,6 +224,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 			"class and global variable using the same name is not allowed");
 	}
 	///////////////////////////////////////////////////
+	checkType(declVar->varType, declVar->tokenL, declVar->tokenR);
 
 	auto iter = mapLocalVar.find(declVar->varName);
 	auto &curBlock = stkCurrentBlockVar.top();
