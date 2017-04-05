@@ -36,6 +36,7 @@ public:
 
 protected:
 	void printIssue(const issue &e);
+	void printLine(const std::string &line, size_t l, size_t r);
 
 protected:
 	issueLevel printLevel;

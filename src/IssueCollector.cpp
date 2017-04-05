@@ -51,6 +51,7 @@ void IssueCollector::fatal(ssize_t tokenL, ssize_t tokenR, const std::string &de
 
 void IssueCollector::printIssue(const issue &e)
 {
+	static const size_t maxLine = 10;
 	static const std::vector<std::string> issueLevelName = { "Notice", "Warning", "Error", "Fatal Error" };
 	if (e.level >= printLevel && printTarget && tokenStream)
 	{
@@ -69,22 +70,51 @@ void IssueCollector::printIssue(const issue &e)
 			auto *endToken = tokenStream->get(e.tokenR);
 			size_t endLine = endToken->getLine();
 			size_t endPos = endToken->getCharPositionInLine() + endToken->getStopIndex() - endToken->getStartIndex();
-			*printTarget << lineContent.at(startLine - 1) << std::endl;
-			for (size_t i = 0; i < startPos; i++)
-				*printTarget << " ";
-			*printTarget << "^";
-			if (endLine == startLine)
-			{
-				for (size_t i = startPos + 1; i <= endPos; i++)
-					*printTarget << "~";
-				*printTarget << std::endl;
-			}
+			
+			if (startLine == endLine)
+				printLine(lineContent.at(startLine - 1), startPos, endPos);
 			else
 			{
-				*printTarget << std::endl;
-				for (size_t i = startLine + 1; i <= endLine; i++)
-					*printTarget << lineContent.at(i - 1) << std::endl;
+				printLine(lineContent.at(startLine - 1), startPos, startPos);
+				for (size_t i = startLine + 1; i <= endLine && i <= startLine + maxLine; i++)
+					printLine(lineContent.at(i - 1), 1, 0);
 			}
 		}
 	}
+}
+
+void IssueCollector::printLine(const std::string &line, size_t l, size_t r)
+{
+	static const size_t tabStop = 4;
+	auto getHighlightChar = [l, r](size_t pos)
+	{
+		if (pos < l)
+			return ' ';
+		if (pos == l)
+			return '^';
+		if (pos > l && pos <= r)
+			return '~';
+		return ' ';
+	};
+	std::string highlight;
+	*printTarget << ' ';
+	for (size_t i = 0; i < line.size(); i++)
+	{
+		if (line[i] == '\t')
+		{
+			for (size_t j = i; j > i && j % tabStop == 0; j++)
+			{
+				*printTarget << ' ';
+				highlight += getHighlightChar(i);
+			}
+		}
+		else
+		{
+			*printTarget << line[i];
+			highlight += getHighlightChar(i);
+		}
+	}
+	*printTarget << std::endl;
+	if (l <= r)
+		*printTarget << ' ' << highlight << std::endl;
 }
