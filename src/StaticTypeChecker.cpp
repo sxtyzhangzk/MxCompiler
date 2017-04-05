@@ -50,16 +50,6 @@ bool StaticTypeChecker::preCheck(ASTRoot *root)
 				ASTDeclFunc *declFunc = dynamic_cast<ASTDeclFunc *>(memFunc.get());
 				assert(declFunc);
 
-				//// SAME class name & var name is not allowed ////
-				if (declFunc->funcName != declClass->className && 
-					mapClassMemberId.find(declFunc->funcName) != mapClassMemberId.end())
-				{
-					issues->error(declClass->tokenL, declClass->tokenR,
-						"class and global variable using the same name is not allowed");
-					flag = false;
-				}
-				///////////////////////////////////////////////////
-
 				if (!checkFunc(declFunc, mapVarId, varTable))
 					flag = false;
 			}
@@ -204,7 +194,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTDeclFunc *declFunc)
 ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarGlobal *declVar)
 {
 	//// SAME class name & var name is not allowed ////
-	if (mapClassMemberId.find(declVar->varName) != mapClassMemberId.end())
+	if(curClass == -1 && mapClassMemberId.find(declVar->varName) != mapClassMemberId.end())
 	{
 		issues->error(declVar->tokenL, declVar->tokenR,
 			"class and global variable using the same name is not allowed");
@@ -217,13 +207,6 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarGlobal *declVar)
 
 ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 {
-	//// SAME class name & var name is not allowed ////
-	if (mapClassMemberId.find(declVar->varName) != mapClassMemberId.end())
-	{
-		issues->error(declVar->tokenL, declVar->tokenR,
-			"class and global variable using the same name is not allowed");
-	}
-	///////////////////////////////////////////////////
 	checkType(declVar->varType, declVar->tokenL, declVar->tokenR);
 
 	auto iter = mapLocalVar.find(declVar->varName);
