@@ -255,10 +255,13 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 ASTNode * StaticTypeChecker::leave(MxAST::ASTDeclVar *declVar)
 {
 	ASTExpr *initVal = dynamic_cast<ASTExpr *>(declVar->initVal.get());
-	assert(initVal);
-	if (declVar->varType != initVal->exprType)
-		issues->error(declVar->tokenL, declVar->tokenR,
-			"type mismatch when initialize variable");
+	if (initVal)
+	{
+		assert(initVal);
+		if (declVar->varType != initVal->exprType)
+			issues->error(declVar->tokenL, declVar->tokenR,
+				"type mismatch when initialize variable");
+	}
 	return declVar;
 }
 
