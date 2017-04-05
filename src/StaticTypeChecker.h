@@ -26,6 +26,7 @@ protected:
 	virtual MxAST::ASTNode * leave(MxAST::ASTDeclFunc *declFunc) override;
 	virtual MxAST::ASTNode * enter(MxAST::ASTDeclVarGlobal *declVar) override;
 	virtual MxAST::ASTNode * enter(MxAST::ASTDeclVarLocal *declVar) override;
+	virtual MxAST::ASTNode * leave(MxAST::ASTDeclVar *declVar) override;
 	virtual MxAST::ASTNode * enter(MxAST::ASTBlock *block) override;
 	virtual MxAST::ASTNode * leave(MxAST::ASTBlock *block) override;
 	virtual MxAST::ASTNode * enter(MxAST::ASTExprVar *var) override;
