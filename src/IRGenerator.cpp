@@ -293,6 +293,7 @@ void IRGenerator::visit(ASTExprUnary *unary)
 			Operand regtmp = RegByType(regNum++, unary->exprType);
 			insList.push_back(IR(regtmp, unary->oper == ASTExprUnary::Increment ? Add : Sub, lastOperand, ImmByType(1, operandType)));
 			insList.push_back(IRStore(regtmp, lastWriteAddr));
+			lastOperand = regtmp;
 		}
 		else
 			insList.push_back(IR(lastOperand, unary->oper == ASTExprUnary::Increment ? Add : Sub, lastOperand, ImmByType(1, operandType)));
@@ -315,7 +316,7 @@ void IRGenerator::visit(ASTExprUnary *unary)
 		lastOperand = RegByType(regNum - 1, unary->exprType);
 		break;
 	case ASTExprUnary::Not:
-		insList.push_back(IR(Reg8(regNum++), Sne, lastOperand, ImmByType(0, operandType)));
+		insList.push_back(IR(Reg8(regNum++), Seq, lastOperand, ImmByType(0, operandType)));
 		lastOperand = Reg8(regNum - 1);
 		break;
 	case ASTExprUnary::BitNot:

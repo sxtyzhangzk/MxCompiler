@@ -131,7 +131,11 @@ void CodeGeneratorBasic::generateFunc(const MxProgram::funcInfo &finfo, const st
 	curOffset = alignAddr(curOffset, 16);
 
 	for (size_t i = 6; i < finfo.content.params.size(); i++)
-		regAddr[finfo.content.params[i].val] = -(std::int64_t(i) - 5) * 8;
+		regAddr[finfo.content.params[i].val] = -(std::int64_t(i) - 4) * 8;
+
+	// -- param[6] 64 bit -- <- rbp-16
+	// -- ret addr 64 bit -- <- rbp-8
+	// -- old rbp  64 bit -- <- rbp
 
 	writeCode("push rbp");
 	writeCode("mov rbp, rsp");
@@ -583,15 +587,15 @@ void CodeGeneratorBasic::translateIns(Instruction ins)
 			loadOperand(paramRegID[i], ins.paramExt[i]);
 
 		size_t rspOffset = 0;
+		if (ins.paramExt.size() > 6 && ins.paramExt.size() % 2 == 1)
+		{
+			writeCode("sub rsp, 8");
+			rspOffset += 8;
+		}
 		for (ssize_t i = ins.paramExt.size() - 1; i >= 6; i--)
 		{
 			loadOperand(0, ins.paramExt[i]);
 			writeCode("push ", regName(0, 8));
-			rspOffset += 8;
-		}
-		if (rspOffset % 16 != 0)
-		{
-			writeCode("sub rsp, 8");
 			rspOffset += 8;
 		}
 		writeCode("call ", getConst(ins.src1));
@@ -634,10 +638,22 @@ void CodeGeneratorBasic::translateIns(Instruction ins)
 	static const std::unordered_map<int, std::string> mapInsCmp = {
 		{Slt, "setl"}, {Sle, "setle"}, {Seq, "sete"}, {Sne, "setne"}, {Sgt, "setg"}, {Sge, "setge"},
 		{Sltu, "setb"}, {Sleu, "setbe"}, {Sgtu, "seta"}, {Sgeu, "setae"}};
+	static const std::unordered_map<int, std::string> mapInsCmpRev = {
+		{ Sge, "setl" },{ Sgt, "setle" },{ Seq, "sete" },{ Sne, "setne" },{ Sle, "setg" },{ Slt, "setge" },
+		{ Sgeu, "setb" },{ Sgtu, "setbe" },{ Sleu, "seta" },{ Sltu, "setae" } };
+
 	std::string opl = ins.src1.isConst() && !ins.src2.isConst() ? getConst(ins.src1) : loadOperand(0, ins.src1);
 	std::string opr = ins.src2.isConst() ? getConst(ins.src2) : loadOperand(1, ins.src2);
-	writeCode("cmp ", opl, ", ", opr);
-	writeCode(mapInsCmp.find(ins.oper)->second, " ", regName(2, 1));
+	if (ins.src1.isConst() && !ins.src2.isConst())
+	{
+		writeCode("cmp ", opr, ", ", opl);
+		writeCode(mapInsCmpRev.find(ins.oper)->second, " ", regName(2, 1));
+	}
+	else
+	{
+		writeCode("cmp ", opl, ", ", opr);
+		writeCode(mapInsCmp.find(ins.oper)->second, " ", regName(2, 1));
+	}
 	if (ins.dst.size() > 1)
 		writeCode("movzx ", regName(2, ins.dst.size()), ", ", regName(2, 1));
 	storeOperand(ins.dst, 2);
