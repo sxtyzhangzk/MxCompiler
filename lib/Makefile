@@ -1,4 +1,4 @@
-CFLAGS := -Isrc/ -Igenerated/ -std=c++14 -O2 -DNDEBUG
+CFLAGS := -Isrc/ -Igenerated/ -std=c++14 -O1 -DNDEBUG
 
 mxcompiler: libantlr4-runtime.a MxLexer.o MxParser.o MxParserBaseVisitor.o MxParserVisitor.o AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o
 	g++ MxLexer.o MxParser.o MxParserBaseVisitor.o MxParserVisitor.o AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o libantlr4-runtime.a -o mxcompiler 
