@@ -2,12 +2,13 @@
 
 namespace MxAST
 {
-	void ASTVisitor::visit(ASTBlock *block) {}
-	void ASTVisitor::visit(ASTRoot *root) {}
-	void ASTVisitor::visit(ASTDeclClass *declClass) {}
-	void ASTVisitor::visit(ASTDeclVar *declVar) {}
+	void ASTVisitor::visit(ASTNode *node) {}
+	void ASTVisitor::visit(ASTBlock *block) { visit(static_cast<ASTNode *>(block)); }
+	void ASTVisitor::visit(ASTRoot *root) { visit(static_cast<ASTNode *>(root)); }
+	void ASTVisitor::visit(ASTDeclClass *declClass) { visit(static_cast<ASTNode *>(declClass)); }
+	void ASTVisitor::visit(ASTDeclVar *declVar) { visit(static_cast<ASTNode *>(declVar)); }
 	void ASTVisitor::visit(ASTDeclFunc *declFunc) { visit(static_cast<ASTBlock *>(declFunc)); }
-	void ASTVisitor::visit(ASTExpr *expr) {}
+	void ASTVisitor::visit(ASTExpr *expr) { visit(static_cast<ASTNode *>(expr)); }
 	void ASTVisitor::visit(ASTExprImm *imm) { visit(static_cast<ASTExpr *>(imm)); }
 	void ASTVisitor::visit(ASTExprVar *var) { visit(static_cast<ASTExpr *>(var)); }
 	void ASTVisitor::visit(ASTExprUnary *unary) { visit(static_cast<ASTExpr *>(unary)); }
@@ -17,7 +18,7 @@ namespace MxAST
 	void ASTVisitor::visit(ASTExprSubscriptAccess *exprSub) { visit(static_cast<ASTExpr *>(exprSub)); }
 	void ASTVisitor::visit(ASTExprMemberAccess *expr) { visit(static_cast<ASTExpr *>(expr)); }
 	void ASTVisitor::visit(ASTExprFuncCall *expr) { visit(static_cast<ASTExpr *>(expr)); }
-	void ASTVisitor::visit(ASTStatement *stat) {}
+	void ASTVisitor::visit(ASTStatement *stat) { visit(static_cast<ASTNode *>(stat)); }
 	void ASTVisitor::visit(ASTStatementReturn *stat) { visit(static_cast<ASTStatement *>(stat)); }
 	void ASTVisitor::visit(ASTStatementBreak *stat) { visit(static_cast<ASTStatement *>(stat)); }
 	void ASTVisitor::visit(ASTStatementContinue *stat) { visit(static_cast<ASTStatement *>(stat)); }
@@ -80,5 +81,121 @@ namespace MxAST
 	ASTNode * ASTListener::leave(ASTStatementExpr *stat) { return leave(static_cast<ASTStatement *>(stat)); }
 	ASTNode * ASTListener::leave(ASTDeclVarLocal *declVar) { return defaultLeave<ASTStatement, ASTDeclVar>(declVar); }
 	ASTNode * ASTListener::leave(ASTDeclVarGlobal *declVar) { return leave(static_cast<ASTDeclVar *>(declVar)); }
+
+	int ASTExprUnary::evaluate(Operator oper, int val)
+	{
+		switch (oper)
+		{
+		case IncPostfix: case Increment:
+			return val + 1;
+		case DecPostfix: case Decrement:
+			return val - 1;
+		case Positive:
+			return val;
+		case Negative:
+			return -val;
+		case BitNot:
+			return ~val;
+		default:
+			assert(false);
+		}
+		return val;
+	}
+	bool ASTExprUnary::evaluate(Operator oper, bool val)
+	{
+		if (oper == Not)
+			return !val;
+		assert(false);
+		return val;
+	}
+
+	int ASTExprBinary::evaluate(int valL, Operator oper, int valR)
+	{
+		switch (oper)
+		{
+		case Plus:
+			return valL + valR;
+		case Minus:
+			return valL - valR;
+		case Multiple:
+			return valL * valR;
+		case Divide:
+			return valL / valR;
+		case Mod:
+			return valL % valR;
+		case ShiftLeft:
+			return valL << valR;
+		case ShiftRight:
+			return valL >> valR;
+		case BitAnd:
+			return valL & valR;
+		case BitXor:
+			return valL ^ valR;
+		case BitOr:
+			return valL | valR;
+		case Equal:
+			return valL == valR;
+		case NotEqual:
+			return valL != valR;
+		case GreaterThan:
+			return valL > valR;
+		case GreaterEqual:
+			return valL >= valR;
+		case LessThan:
+			return valL < valR;
+		case LessEqual:
+			return valL <= valR;
+		default:
+			assert(false);
+		}
+		return 0;
+	}
+	bool ASTExprBinary::evaluate(bool valL, Operator oper, bool valR)
+	{
+		switch (oper)
+		{
+		case BitAnd: case And:
+			return valL && valR;
+		case BitOr: case Or:
+			return valL || valR;
+		case Equal:
+			return valL == valR;
+		case BitXor: case NotEqual:
+			return valL != valR;
+		case GreaterThan:
+			return valL > valR;
+		case GreaterEqual:
+			return valL >= valR;
+		case LessThan:
+			return valL < valR;
+		case LessEqual:
+			return valL <= valR;
+		default:
+			assert(false);
+		}
+		return false;
+	}
+
+	bool ASTExprBinary::stringCompare(const std::string &valL, Operator oper, const std::string &valR)
+	{
+		switch (oper)
+		{
+		case Equal:
+			return valL == valR;
+		case NotEqual:
+			return valL != valR;
+		case GreaterThan:
+			return valL > valR;
+		case GreaterEqual:
+			return valL >= valR;
+		case LessThan:
+			return valL < valR;
+		case LessEqual:
+			return valL <= valR;
+		default:
+			assert(false);
+		}
+		return false;
+	}
 
 }

@@ -75,6 +75,8 @@ protected:
 	virtual antlrcpp::Any visitExprOr(MxParser::ExprOrContext *ctx) override { return visitBinaryExpr(ctx, MxAST::ASTExprBinary::Or); }
 	virtual antlrcpp::Any visitExprAssignment(MxParser::ExprAssignmentContext *ctx) override;
 
+	std::string transferString(const std::string &in, ssize_t tokenL, ssize_t tokenR);
+
 protected:
 	IssueCollector *issues;
 	GlobalSymbol *symbols;

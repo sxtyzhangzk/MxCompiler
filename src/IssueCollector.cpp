@@ -1,5 +1,7 @@
 #include "IssueCollector.h"
 
+IssueCollector *IssueCollector::defIC = nullptr;
+
 IssueCollector::IssueCollector(issueLevel printLevel, std::ostream *printTarget, const antlr4::TokenStream *tokenStream, const std::string &fileName) :
 	printLevel(printLevel), printTarget(printTarget), tokenStream(tokenStream), fileName(fileName), cntError(0)
 {

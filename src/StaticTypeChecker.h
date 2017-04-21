@@ -1,7 +1,7 @@
 #ifndef MX_COMPILER_VARIABLE_CHECKER_H
 #define MX_COMPILER_VARIABLE_CHECKER_H
 
-#include "MemberTable.h"
+#include "MxProgram.h"
 #include "IssueCollector.h"
 #include "GlobalSymbol.h"
 #include "AST.h"
@@ -12,12 +12,14 @@
 class StaticTypeChecker : public MxAST::ASTListener
 {
 public:
-	StaticTypeChecker(MemberTable *memTable, GlobalSymbol *symbols, IssueCollector *issues);
+	StaticTypeChecker(MxProgram *memTable, GlobalSymbol *symbols, IssueCollector *issues);
 	bool preCheck(MxAST::ASTRoot *root);
 
 protected:
-	bool checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable);
-	bool checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable);
+	bool checkFunc(MxAST::ASTDeclFunc *declFunc, 
+		std::map<size_t, size_t> &mapVarId, std::vector<MxProgram::varInfo> &varTable,
+		size_t className);
+	bool checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MxProgram::varInfo> &varTable);
 	bool checkType(MxType type, ssize_t tokenL, ssize_t tokenR);
 
 	virtual MxAST::ASTNode * enter(MxAST::ASTDeclClass *declClass) override;
@@ -47,14 +49,14 @@ protected:
 	virtual MxAST::ASTNode * enter(MxAST::ASTStatementFor *stat) override;
 	virtual MxAST::ASTNode * leave(MxAST::ASTStatementFor *stat) override;
 protected:
-	MemberTable *memTable;
+	MxProgram *program;
 	IssueCollector *issues;
 	GlobalSymbol *symbols;
 
 	std::map<size_t, std::map<size_t, size_t>> mapClassMemberId;	//class name -> { member name -> var id }
 	std::map<size_t, size_t> mapGlobalVar;
 
-	std::vector<MemberTable::varInfo> vLocalVar;
+	std::vector<MxProgram::varInfo> vLocalVar;
 	std::map<size_t, std::stack<size_t>> mapLocalVar;		//name -> local var id
 	std::stack<std::set<size_t>> stkCurrentBlockVar;
 

@@ -34,6 +34,9 @@ public:
 	void error(ssize_t tokenL, ssize_t tokenR, const std::string &description);
 	void fatal(ssize_t tokenL, ssize_t tokenR, const std::string &description);
 
+	void setDefault() { defIC = this; }
+	static IssueCollector * getDefault() { return defIC; }
+
 protected:
 	void printIssue(const issue &e);
 	void printLine(const std::string &line, size_t l, size_t r);
@@ -44,6 +47,8 @@ protected:
 	const antlr4::TokenStream *tokenStream;
 	std::string fileName;
 	std::vector<std::string> lineContent;
+
+	static IssueCollector *defIC;
 };
 
 #endif

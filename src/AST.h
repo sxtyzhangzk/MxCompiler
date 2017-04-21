@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <unordered_map>
 
 namespace MxAST
 {
@@ -39,6 +40,8 @@ namespace MxAST
 	class ASTVisitor
 	{
 	public:
+		//WARNING: Be careful when using visit(ASTNode *node)
+		virtual void visit(ASTNode *node);
 		virtual void visit(ASTBlock *block);
 		virtual void visit(ASTRoot *root);
 		virtual void visit(ASTDeclClass *declClass);
@@ -273,11 +276,13 @@ namespace MxAST
 	{
 	public:
 		MxType exprType;
-		bool isLValue, hasSideEffect;
+		ValueType vType;
+		bool sideEffect;
 
 	protected:
-		ASTExpr() {}
-		ASTExpr(MxType exprType) : exprType(exprType) {}
+		ASTExpr() : exprType(MxType{ MxType::Void }), vType(rvalue), sideEffect(true) {}
+		ASTExpr(MxType exprType) : exprType(exprType), vType(rvalue), sideEffect(true) {}
+		ASTExpr(MxType exprType, ValueType vType, bool sideEffect) : exprType(exprType), vType(vType), sideEffect(sideEffect) {}
 	};
 
 	class ASTRoot : public ASTNode
@@ -383,10 +388,10 @@ namespace MxAST
 		IF_DEBUG(std::string strContent);
 
 	public:
-		ASTExprImm() {}
-		ASTExprImm(bool bvalue) : ASTExpr(MxType{ MxType::Bool }) { exprVal.bvalue = bvalue; }
-		ASTExprImm(int ivalue) : ASTExpr(MxType{ MxType::Integer }) { exprVal.ivalue = ivalue; }
-		ASTExprImm(std::nullptr_t) : ASTExpr(MxType{ MxType::Object, 0, size_t(-1) }) {}
+		ASTExprImm() : ASTExpr(MxType{ MxType::Void }, rvalue, false) {}
+		ASTExprImm(bool bvalue) : ASTExpr(MxType{ MxType::Bool }, rvalue, false) { exprVal.bvalue = bvalue; }
+		ASTExprImm(int ivalue) : ASTExpr(MxType{ MxType::Integer }, rvalue, false) { exprVal.ivalue = ivalue; }
+		ASTExprImm(std::nullptr_t) : ASTExpr(MxType{ MxType::Object, 0, size_t(-1) }, rvalue, false) {}
 	};
 
 	class ASTExprVar : public ASTExpr
@@ -418,7 +423,7 @@ namespace MxAST
 		}
 
 	public:
-		enum Operator
+		enum Operator : int
 		{
 			IncPostfix, DecPostfix,
 			Increment, Decrement,
@@ -433,6 +438,22 @@ namespace MxAST
 			oper(oper), operand(std::move(operand)) {}
 		ASTExprUnary(Operator oper, ASTNode *operand) :
 			oper(oper), operand(operand) {}
+
+		static std::string getOperName(Operator op)
+		{
+			static const std::unordered_map<int, std::string> operName = {
+				{IncPostfix, "++"}, {DecPostfix, "--"}, {Increment, "++"}, {Decrement, "--"},
+				{Positive, "+"}, {Negative, "-"}, {Not, "!"}, {BitNot, "~"}};
+			return operName.find(op)->second;
+		}
+		std::string getOperName()
+		{
+			return getOperName(oper);
+		}
+		static int evaluate(Operator oper, int val);
+		static bool evaluate(Operator oper, bool val);
+		int evaluate(int val) const { return evaluate(oper, val); }
+		bool evaluate(bool val) const { return evaluate(oper, val); }
 	};
 
 	class ASTExprBinary : public ASTExpr
@@ -448,7 +469,7 @@ namespace MxAST
 			listenerLeave(listeners, container, this);
 		}
 	public:
-		enum Operator
+		enum Operator : int
 		{
 			Plus, Minus, Multiple, Divide, Mod,
 			ShiftLeft, ShiftRight,
@@ -466,6 +487,27 @@ namespace MxAST
 			oper(oper), operandL(std::move(operandL)), operandR(std::move(operandR)) {}
 		ASTExprBinary(Operator oper, ASTNode *operandL, ASTNode *operandR) :
 			oper(oper), operandL(operandL), operandR(operandR) {}
+
+		static std::string getOperName(Operator op)
+		{
+			static const std::unordered_map<int, std::string> operName = {
+				{Plus, "+"}, {Minus, "-"}, {Multiple, "*"}, {Divide, "/"}, {Mod, "%"},
+				{ShiftLeft, "<<"}, {ShiftRight, ">>"}, {BitAnd, "&"}, {BitXor, "^"}, {BitOr, "|"},
+				{And, "&&"}, {Or, "||"},
+				{Equal, "=="}, {NotEqual, "!="},
+				{GreaterThan, ">"}, {GreaterEqual, ">="}, {LessThan, "<"}, {LessEqual, "<="} };
+			return operName.find(op)->second;
+		}
+		std::string getOperName()
+		{
+			return getOperName(oper);
+		}
+		static int evaluate(int valL, Operator oper, int valR);
+		static bool evaluate(bool valL, Operator oper, bool valR);
+		static bool stringCompare(const std::string &valL, Operator oper, const std::string &valR);
+		int evaluate(int valL, int valR) const { return evaluate(valL, oper, valR); }
+		bool evaluate(bool valL, bool valR) const { return evaluate(valL, oper, valR); }
+		bool stringCompare(const std::string &valL, const std::string &valR) const { return stringCompare(valL, oper, valR); }
 	};
 
 	class ASTExprAssignment : public ASTExpr
@@ -498,6 +540,7 @@ namespace MxAST
 	public:
 		std::vector<std::unique_ptr<ASTNode>> paramList; //paramList or arraySize: new int[1][2][3][] -> {1, 2, 3, nullptr}
 		bool isArray;
+		size_t funcID;
 	};
 
 	class ASTExprSubscriptAccess : public ASTExpr

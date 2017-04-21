@@ -409,7 +409,8 @@ antlrcpp::Any ASTConstructor::visitExprPrimary(MxParser::ExprPrimaryContext *ctx
 		size_t length = strContent.size();
 		assert(length >= 2 && strContent[0] == '\"' && strContent[length - 1] == '\"');
 		strContent = strContent.substr(1, length - 2);
-		//TODO: Transfer Char
+		strContent = transferString(strContent, ctx->getSourceInterval().a, ctx->getSourceInterval().b);
+		
 		std::unique_ptr<ASTExprImm> imm(newNode<ASTExprImm>(ctx->String()));
 		imm->exprType = MxType{ MxType::String };
 		imm->exprVal.strId = symbols->addString(strContent);
@@ -577,4 +578,37 @@ antlrcpp::Any ASTConstructor::visitExprAssignment(MxParser::ExprAssignmentContex
 	}
 	node.reset(assign.release());
 	return nullptr;
+}
+
+std::string ASTConstructor::transferString(const std::string &in, ssize_t tokenL, ssize_t tokenR)
+{
+	std::string ret;
+	bool transfer = false;
+	for (size_t i = 0; i < in.size(); i++)
+	{
+		if (transfer)
+		{
+			if (in[i] == 'n')
+				ret += '\n';
+			else if (in[i] == 'r')
+				ret += '\r';
+			else if (in[i] == 't')
+				ret += '\t';
+			else if (in[i] == '\\')
+				ret += '\\';
+			else if (in[i] == '"')
+				ret += '"';
+			else if (in[i] == '\'')
+				ret += '\'';
+			else
+				issues->error(tokenL, tokenR, std::string("unrecognized transfer character: ") + in[i]);
+			transfer = false;
+			continue;
+		}
+		if (in[i] == '\\')
+			transfer = true;
+		else
+			ret += in[i];
+	}
+	return ret;
 }

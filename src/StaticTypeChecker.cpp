@@ -2,17 +2,16 @@
 #include "MxBuiltin.h"
 using namespace MxAST;
 
-StaticTypeChecker::StaticTypeChecker(MemberTable *memTable, GlobalSymbol *symbols, IssueCollector *issues) :
-	memTable(memTable), symbols(symbols), issues(issues), curClass(-1), curFunc(-1), depthLoop(0)
+StaticTypeChecker::StaticTypeChecker(MxProgram *memTable, GlobalSymbol *symbols, IssueCollector *issues) :
+	program(memTable), symbols(symbols), issues(issues), curClass(-1), curFunc(-1), depthLoop(0)
 {
-	fillBuiltinMemberTable(memTable);
 	for (size_t i = 0; i < memTable->vGlobalVars.size(); i++)
 		mapGlobalVar.insert({ memTable->vGlobalVars[i].varName, i });
-	for (auto &cls : memTable->vClassMembers)
+	for (auto &cls : memTable->vClass)
 	{
 		mapClassMemberId.insert({ cls.first, std::map<size_t, size_t>() });
-		for (size_t i = 0; i < cls.second.size(); i++)
-			mapClassMemberId[cls.first].insert({ cls.second[i].varName, i });
+		for (size_t i = 0; i < cls.second.members.size(); i++)
+			mapClassMemberId[cls.first].insert({ cls.second.members[i].varName, i });
 	}
 }
 
@@ -32,7 +31,7 @@ bool StaticTypeChecker::preCheck(ASTRoot *root)
 			continue;
 		}
 		mapClassMemberId.insert({ declClass->className, std::map<size_t, size_t>() });
-		memTable->vClassMembers.insert({ declClass->className, std::vector<MemberTable::varInfo>() });
+		program->vClass.insert({ declClass->className, {0, std::vector<MxProgram::varInfo>() } });
 	}
 	if (!flag)
 		return false;
@@ -44,13 +43,13 @@ bool StaticTypeChecker::preCheck(ASTRoot *root)
 		if (declClass)
 		{
 			std::map<size_t, size_t> &mapVarId = mapClassMemberId[declClass->className];	//var name -> var id
-			std::vector<MemberTable::varInfo> &varTable = memTable->vClassMembers[declClass->className];
+			std::vector<MxProgram::varInfo> &varTable = program->vClass[declClass->className].members;
 			for (auto &memFunc : declClass->vMemFuncs)
 			{
 				ASTDeclFunc *declFunc = dynamic_cast<ASTDeclFunc *>(memFunc.get());
 				assert(declFunc);
 
-				if (!checkFunc(declFunc, mapVarId, varTable))
+				if (!checkFunc(declFunc, mapVarId, varTable, declClass->className))
 					flag = false;
 			}
 			for (auto &memVar : declClass->vMemVars)
@@ -68,25 +67,29 @@ bool StaticTypeChecker::preCheck(ASTRoot *root)
 			//// SAME class name & var name is not allowed ////
 			if (mapClassMemberId.find(declFunc->funcName) != mapClassMemberId.end())
 			{
-				issues->error(declClass->tokenL, declClass->tokenR,
+				issues->error(declFunc->tokenL, declFunc->tokenR,
 					"class and global variable using the same name is not allowed");
 				flag = false;
 			}
 			///////////////////////////////////////////////////
-			if (!checkFunc(declFunc, mapGlobalVar, memTable->vGlobalVars))
+			if (!checkFunc(declFunc, mapGlobalVar, program->vGlobalVars, size_t(-1)))
 				flag = false;
 		}
 	}
-	memTable->vLocalVars.resize(memTable->vFuncs.size());
+	program->vLocalVars.resize(program->vFuncs.size());
 	return flag;
 }
 
-bool StaticTypeChecker::checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable)
+bool StaticTypeChecker::checkFunc(MxAST::ASTDeclFunc *declFunc, 
+	std::map<size_t, size_t> &mapVarId, std::vector<MxProgram::varInfo> &varTable,
+	size_t className)
 {
 	if (!checkType(declFunc->retType, declFunc->tokenL, declFunc->tokenR))
 		return false;
 
 	std::vector<MxType> thisParamType;
+	if (className != size_t(-1))
+		thisParamType.push_back(MxType{ MxType::Object, 0, className });
 	for (auto &node : declFunc->param)
 	{
 		ASTDeclVar *dVar = dynamic_cast<ASTDeclVar *>(node.get());
@@ -99,12 +102,12 @@ bool StaticTypeChecker::checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t,
 	auto iter = mapVarId.find(declFunc->funcName);
 	if (iter != mapVarId.end())
 	{
-		MemberTable::varInfo vinfo = varTable[iter->second];
+		MxProgram::varInfo vinfo = varTable[iter->second];
 		assert(vinfo.varType.mainType == MxType::Function);		//we always consider functions first
 		size_t olid = vinfo.varType.funcOLID;
-		for (size_t funcId : memTable->vOverloadedFuncs[olid])
+		for (size_t funcId : program->vOverloadedFuncs[olid])
 		{
-			std::vector<MxType> paramType = memTable->vFuncs[funcId].paramType;
+			std::vector<MxType> paramType = program->vFuncs[funcId].paramType;
 			if (std::equal(paramType.begin(), paramType.end(), thisParamType.begin(), thisParamType.end()))
 			{
 				issues->error(declFunc->tokenL, declFunc->tokenR,
@@ -112,22 +115,23 @@ bool StaticTypeChecker::checkFunc(MxAST::ASTDeclFunc *declFunc, std::map<size_t,
 				return false;
 			}
 		}
-		declFunc->funcID = memTable->vFuncs.size();
-		memTable->vOverloadedFuncs[olid].push_back(declFunc->funcID);	//overload +1
+		declFunc->funcID = program->vFuncs.size();
+		program->vOverloadedFuncs[olid].push_back(declFunc->funcID);	//overload +1
 	}
 	else
 	{
-		declFunc->funcID = memTable->vFuncs.size();
-		size_t olid = memTable->vOverloadedFuncs.size();
-		memTable->vOverloadedFuncs.push_back({ declFunc->funcID });		//overload +1
+		declFunc->funcID = program->vFuncs.size();
+		size_t olid = program->vOverloadedFuncs.size();
+		program->vOverloadedFuncs.push_back({ declFunc->funcID });		//overload +1
 		mapVarId.insert({ declFunc->funcName, varTable.size() });
-		varTable.push_back(MemberTable::varInfo{ declFunc->funcName, MxType{MxType::Function, 0, size_t(-1), olid} });	//var +1
+		varTable.push_back(MxProgram::varInfo{ declFunc->funcName, MxType{MxType::Function, 0, size_t(-1), olid} });	//var +1
 	}
-	memTable->vFuncs.push_back(MemberTable::funcInfo{ declFunc->funcName, declFunc->retType, thisParamType });	//func +1
+	program->vFuncs.push_back(MxProgram::funcInfo{ 
+		declFunc->funcName, declFunc->retType, thisParamType, 0, className != size_t(-1) });	//func +1
 	return true;
 }
 
-bool StaticTypeChecker::checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MemberTable::varInfo> &varTable)
+bool StaticTypeChecker::checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MxProgram::varInfo> &varTable)
 {
 	if (!checkType(declVar->varType, declVar->tokenL, declVar->tokenR))
 		return false;
@@ -141,7 +145,7 @@ bool StaticTypeChecker::checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, si
 	}
 	declVar->varID = varTable.size();
 	mapVarId.insert({ declVar->varName, declVar->varID });
-	varTable.push_back(MemberTable::varInfo{ declVar->varName, declVar->varType });
+	varTable.push_back(MxProgram::varInfo{ declVar->varName, declVar->varType });
 	return true;
 }
 
@@ -185,7 +189,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTDeclFunc *declFunc)
 	assert(stkCurrentBlockVar.empty());
 	assert(depthLoop == 0);
 	curFunc = -1;
-	memTable->vLocalVars[declFunc->funcID] = std::move(vLocalVar);
+	program->vLocalVars[declFunc->funcID] = std::move(vLocalVar);
 	vLocalVar.clear();
 	mapLocalVar.clear();
 	return declFunc;
@@ -201,7 +205,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarGlobal *declVar)
 	}
 	///////////////////////////////////////////////////
 	if(curClass == -1)
-		checkVar(declVar, mapGlobalVar, memTable->vGlobalVars);
+		checkVar(declVar, mapGlobalVar, program->vGlobalVars);
 	return declVar;
 }
 
@@ -231,7 +235,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclVarLocal *declVar)
 		mapLocalVar.insert({ declVar->varName, std::move(tmp) });
 	}
 	curBlock.insert(declVar->varID);
-	vLocalVar.push_back(MemberTable::varInfo{ declVar->varName, declVar->varType });
+	vLocalVar.push_back(MxProgram::varInfo{ declVar->varName, declVar->varType });
 	return declVar;
 }
 
@@ -276,7 +280,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTExprVar *var)
 				"Invalid use of 'this' in non-member function");
 			return var;
 		}
-		var->isLValue = false;
+		var->vType = rvalue;
 		var->exprType = MxType{ MxType::Object, 0, curClass, size_t(-1) };
 		return var;
 	}
@@ -286,7 +290,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTExprVar *var)
 		var->isGlobalVar = false;
 		var->varID = iterLocal->second.top();
 		var->exprType = vLocalVar[var->varID].varType;
-		var->isLValue = var->exprType.mainType != MxType::Function;
+		var->vType = var->exprType.mainType == MxType::Function ? rvalue : lvalue;
 		return var;
 	}
 	if (curClass != -1)
@@ -298,15 +302,15 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTExprVar *var)
 			std::unique_ptr<ASTExprVar> tmpThis(new ASTExprVar);
 			tmpThis->isThis = true;
 			tmpThis->exprType = MxType{ MxType::Object, 0, curClass, size_t(-1) };
-			tmpThis->isLValue = false;
+			tmpThis->vType = lvalue;
 			std::unique_ptr<ASTExprMemberAccess> ret(new ASTExprMemberAccess);
 			ret->tokenL = var->tokenL;
 			ret->tokenR = var->tokenR;
 			ret->memberName = var->varName;
 			ret->memberID = iterMember->second;
 			ret->object = std::move(tmpThis);
-			ret->exprType = memTable->vClassMembers[curClass][ret->memberID].varType;
-			ret->isLValue = ret->exprType.mainType != MxType::Function;
+			ret->exprType = program->vClass[curClass].members[ret->memberID].varType;
+			ret->vType = ret->exprType.mainType == MxType::Function ? rvalue : lvalue;
 			return ret.release();
 		}
 	}
@@ -315,8 +319,8 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTExprVar *var)
 	{
 		var->isGlobalVar = true;
 		var->varID = iterGlobal->second;
-		var->exprType = memTable->vGlobalVars[var->varID].varType;
-		var->isLValue = var->exprType.mainType != MxType::Function;
+		var->exprType = program->vGlobalVars[var->varID].varType;
+		var->vType = var->exprType.mainType == MxType::Function ? rvalue : lvalue;
 		return var;
 	}
 	issues->error(var->tokenL, var->tokenR,
@@ -326,7 +330,7 @@ ASTNode * StaticTypeChecker::enter(MxAST::ASTExprVar *var)
 
 ASTNode * StaticTypeChecker::leave(MxAST::ASTExprImm *imm)
 {
-	imm->isLValue = false;
+	imm->vType = rvalue;
 	return imm;
 }
 
@@ -351,14 +355,14 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprUnary *expr)
 	if (expr->oper == ASTExprUnary::Increment || expr->oper == ASTExprUnary::Decrement ||
 		expr->oper == ASTExprUnary::IncPostfix || expr->oper == ASTExprUnary::DecPostfix)
 	{
-		if (!operand->isLValue)
+		if (operand->vType != lvalue)
 			issues->error(expr->tokenL, expr->tokenR,
 				"lvalue required");
 	}
 	if (expr->oper == ASTExprUnary::Increment || expr->oper == ASTExprUnary::Decrement)
-		expr->isLValue = true;
+		expr->vType = lvalue;
 	else
-		expr->isLValue = false;
+		expr->vType = rvalue;
 	return expr;
 }
 
@@ -366,14 +370,17 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprBinary *expr)
 {
 	ASTExpr *operandL = dynamic_cast<ASTExpr *>(expr->operandL.get());
 	ASTExpr *operandR = dynamic_cast<ASTExpr *>(expr->operandR.get());
-	expr->isLValue = false;
+	expr->vType = rvalue;
 	switch (expr->oper)
 	{
 	case ASTExprBinary::Plus: 
 		if (operandL->exprType.mainType == MxType::Integer && operandR->exprType.mainType == MxType::Integer)
 			expr->exprType = MxType{ MxType::Integer };
 		else if (operandL->exprType.mainType == MxType::String && operandR->exprType.mainType == MxType::String)
+		{
 			expr->exprType = MxType{ MxType::String };
+			expr->vType = xvalue;
+		}
 		else
 			issues->error(expr->tokenL, expr->tokenR,
 				"Both operands need to be integer or string");
@@ -424,7 +431,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprAssignment *expr)
 {
 	ASTExpr *operandL = dynamic_cast<ASTExpr *>(expr->operandL.get());
 	ASTExpr *operandR = dynamic_cast<ASTExpr *>(expr->operandR.get());
-	if (!operandL->isLValue)
+	if (operandL->vType != lvalue)
 		issues->error(expr->tokenL, expr->tokenR,
 			"lvalue required as left operand of assignment");
 	if (operandR->exprType.mainType == MxType::Void)
@@ -433,7 +440,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprAssignment *expr)
 	if (operandL->exprType != operandR->exprType)
 		issues->error(expr->tokenL, expr->tokenR,
 			"Both operands need to be the same type");
-	expr->isLValue = true;
+	expr->vType = lvalue;
 	expr->exprType = operandL->exprType;
 	return expr;
 }
@@ -447,7 +454,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprNew *expr)
 			"Constructor with parameters not implemented");
 		return expr;
 	}
-	expr->isLValue = false;
+	expr->vType = xvalue;
 	if (expr->isArray)
 	{
 		for (auto &param : expr->paramList)
@@ -473,7 +480,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprSubscriptAccess *expr)
 		issues->error(expr->tokenL, expr->tokenR,
 			"array required");
 	expr->exprType.arrayDim--;
-	expr->isLValue = true;
+	expr->vType = lvalue;
 	return expr;
 }
 
@@ -481,7 +488,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprMemberAccess *expr)
 {
 	ASTExpr *object = dynamic_cast<ASTExpr *>(expr->object.get());
 	assert(object);
-	size_t className = getBuiltinClassByType(object->exprType);
+	size_t className = MxBuiltin::getBuiltinClassByType(object->exprType);
 	if (className == size_t(-1))
 	{
 		if (object->exprType.mainType == MxType::Object && object->exprType.className != -1)
@@ -502,8 +509,8 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprMemberAccess *expr)
 		return expr;
 	}
 	expr->memberID = iterMember->second;
-	expr->exprType = memTable->vClassMembers[className][expr->memberID].varType;
-	expr->isLValue = expr->exprType.mainType != MxType::Function;
+	expr->exprType = program->vClass[className].members[expr->memberID].varType;
+	expr->vType = expr->exprType.mainType == MxType::Function ? rvalue : lvalue;
 	return expr;
 }
 
@@ -517,38 +524,62 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprFuncCall *expr)
 			"function required");
 		return expr;
 	}
-	expr->isLValue = false;
+	expr->vType = rvalue;
 	size_t olid = func->exprType.funcOLID;
-	for (size_t funcID : memTable->vOverloadedFuncs[olid])
+
+	bool matched = false;
+	for (size_t funcID : program->vOverloadedFuncs[olid])
 	{
-		if (memTable->vFuncs[funcID].paramType.size() != expr->paramList.size())
-			continue;
-		bool flag = true;
-		for (size_t i = 0; i < expr->paramList.size(); i++)
+		const MxProgram::funcInfo &finfo = program->vFuncs[funcID];
+		std::vector<MxType>::const_iterator iterParam;
+		if (program->vFuncs[funcID].isThiscall)
 		{
-			ASTExpr *paramExpr = dynamic_cast<ASTExpr *>(expr->paramList[i].get());
+			if (finfo.paramType.size() != expr->paramList.size() + 1)
+				continue;
+			iterParam = finfo.paramType.begin() + 1;
+		}
+		else
+		{
+			if (finfo.paramType.size() != expr->paramList.size())
+				continue;
+			iterParam = finfo.paramType.begin();
+		}
+
+		bool flag = true;
+		for (auto iterCall = expr->paramList.begin(); iterCall != expr->paramList.end(); ++iterCall, ++iterParam)
+		{
+			ASTExpr *paramExpr = dynamic_cast<ASTExpr *>(iterCall->get());
 			assert(paramExpr);
-			if (memTable->vFuncs[funcID].paramType[i] != paramExpr->exprType)
+			if (paramExpr->exprType != *iterParam)
 			{
 				flag = false;
 				break;
 			}
 		}
-		if (flag)
+		if (!flag)
+			continue;
+		if (matched)
 		{
-			expr->funcID = funcID;
-			expr->exprType = memTable->vFuncs[funcID].retType;
-			return expr;
+			issues->error(expr->tokenL, expr->tokenR,
+				"ambiguous function call");
+			continue;
 		}
+		matched = true;
+		expr->funcID = funcID;
+		expr->exprType = finfo.retType;
+		if (finfo.retType.mainType == MxType::String || finfo.retType.mainType == MxType::Object || finfo.retType.arrayDim > 0)
+			expr->vType = xvalue;
+		program->vFuncs[curFunc].dependency.insert(funcID);
 	}
-	issues->error(expr->tokenL, expr->tokenR,
-		"No such function");
+	if(!matched)
+		issues->error(expr->tokenL, expr->tokenR,
+			"No such function");
 	return expr;
 }
 
 ASTNode * StaticTypeChecker::leave(MxAST::ASTStatementReturn *stat)
 {
-	MxType retType = memTable->vFuncs[curFunc].retType;
+	MxType retType = program->vFuncs[curFunc].retType;
 	if (retType.mainType == MxType::Void)
 	{
 		if (stat->retExpr)

@@ -12,8 +12,19 @@
 #include <antlr4-common.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 constexpr size_t MAX_ERROR = 100;
+constexpr size_t MAX_STRINGSIZE = 100000;
+constexpr size_t MAX_STRINGMEMUSAGE = 10000000;
+constexpr size_t POINTER_SIZE = 8;
+
+enum ValueType
+{
+	lvalue, 
+	xvalue, //expiring value
+	rvalue	//rvalue or constant
+};
 
 struct MxType
 {
@@ -30,6 +41,22 @@ struct MxType
 	bool isNull() const
 	{
 		return mainType == Object && className == size_t(-1);
+	}
+	bool isObject() const
+	{
+		return mainType == Object || mainType == String || arrayDim > 0;
+	}
+	size_t getSize() const
+	{
+		if (arrayDim > 0)
+			return POINTER_SIZE;
+		if (mainType == Void)
+			return 0;
+		if (mainType == Bool)
+			return 1;
+		if (mainType == Integer)
+			return 4;
+		return POINTER_SIZE;
 	}
 	bool operator==(const MxType &rhs) const
 	{
@@ -49,7 +76,51 @@ struct MxType
 	{
 		return !(*this == rhs);
 	}
+
+	static MxType Null()
+	{
+		return MxType{ Object, 0, size_t(-1) };
+	}
 };
+
+inline std::string transferHTML(const std::string &in)
+{
+	std::string ret;
+	for (char c : in)
+	{
+		if (c == '<')
+			ret += "&lt;";
+		else if (c == '>')
+			ret += "&gt;";
+		else if (c == ' ')
+			ret += "&nbsp;";
+		else if (c == '"')
+			ret += "&quot;";
+		else if (c == '&')
+			ret += "&amp;";
+		else if (c == '\n')
+			ret += "<br align='left'/>";
+		else
+			ret += c;
+	}
+	return ret;
+}
+
+//align addr to align bytes
+constexpr std::uint64_t alignAddr(std::uint64_t addr, std::uint64_t align)
+{
+	return (addr + align - 1) / align * align;
+}
+
+template<typename ...T>
+void prints(std::ostream &out, T&&... val) {}
+
+template<typename Tnow, typename ...T>
+void prints(std::ostream &out, Tnow &&now, T&&... val)
+{
+	out << std::forward<Tnow>(now);
+	prints(out, std::forward<T>(val)...);
+}
 
 
 #endif
