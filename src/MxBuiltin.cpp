@@ -367,7 +367,7 @@ Function MxBuiltin::builtin_substring()
 	block[4]->brTrue = block[5];
 
 	block[5]->ins = {
-		IR(RegPtr(6), LoadA, RegPtr(0), ImmPtr(stringHeader)),	//%6: length of string
+		IR(RegPtr(6), Load, RegPtr(0)),	//%6: length of string
 		IR(Reg8(7), Sge, RegPtr(2), RegPtr(6)),	//if right >= length => right = length-1
 		IRBranch(Reg8(7), unlikely),
 	};

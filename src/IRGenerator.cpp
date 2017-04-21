@@ -390,7 +390,10 @@ void IRGenerator::visit(ASTExprBinary *binary)
 
 		if (visFlag & Read)
 		{
-			blkSkip->ins = { IR(lastOperand, Move, skipVal) };
+			blkSkip->ins = {
+				IR(lastOperand, Move, skipVal),
+				IRJump(),
+			};
 			blkSkip->brTrue = blkFinal;
 		}
 
