@@ -162,9 +162,7 @@ void CodeGeneratorBasic::generateConst(const MxProgram::constInfo &cinfo, const 
 		std::stringstream ss;
 		for (auto iter = iterBegin; iter != iterEnd; ++iter)
 		{
-			if (*iter == '\'')
-				lastVisible += "\\\'";
-			else if (*iter >= 0x20 && *iter <= 0x7E)
+			if (*iter >= 0x20 && *iter <= 0x7E && *iter != '\'')
 				lastVisible += *iter;
 			else
 			{

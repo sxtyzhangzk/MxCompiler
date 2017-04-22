@@ -22,6 +22,9 @@ protected:
 	bool checkVar(MxAST::ASTDeclVar *declVar, std::map<size_t, size_t> &mapVarId, std::vector<MxProgram::varInfo> &varTable);
 	bool checkType(MxType type, ssize_t tokenL, ssize_t tokenR);
 
+	size_t findConstructor(size_t className, const std::vector<MxType> &vTypes);
+	size_t findOverloadedFunc(size_t olid, const std::vector<MxType> &vTypes); //return -1 for not found, -2 for ambiguous call
+
 	virtual MxAST::ASTNode * enter(MxAST::ASTDeclClass *declClass) override;
 	virtual MxAST::ASTNode * leave(MxAST::ASTDeclClass *declClass) override;
 	virtual MxAST::ASTNode * enter(MxAST::ASTDeclFunc *declFunc) override;

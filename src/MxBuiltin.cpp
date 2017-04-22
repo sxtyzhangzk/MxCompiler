@@ -178,7 +178,7 @@ Function MxBuiltin::builtin_println()
 Function MxBuiltin::builtin_getString()
 {
 	static const size_t blockSize = 1024;
-	std::shared_ptr<Block> block[10];
+	std::shared_ptr<Block> block[11];
 	for (auto &blk : block)
 		blk.reset(new Block);
 
@@ -191,7 +191,7 @@ Function MxBuiltin::builtin_getString()
 	block[0]->brTrue = block[1];
 	
 	block[1]->ins = {
-		IRCall(RegPtr(3), IDExtSymbol(size_t(BuiltinSymbol::getchar)), {}),
+		IRCall(Reg32(3), IDExtSymbol(size_t(BuiltinSymbol::getchar)), {}),
 		IR(Reg8(4), Sne, Reg32(3), Imm32(-1)),
 		IRBranch(Reg8(4), likely),
 	};
@@ -203,14 +203,14 @@ Function MxBuiltin::builtin_getString()
 		IRBranch(Reg8(5), likely),
 	};
 	block[2]->brTrue = block[3];
-	block[2]->brFalse = block[6];
+	block[2]->brFalse = block[9];
 
 	block[3]->ins = {
 		IR(Reg8(6), Sne, Reg32(3), Imm32('\n')),
 		IRBranch(Reg8(6), likely),
 	};
 	block[3]->brTrue = block[4];
-	block[3]->brFalse = block[6];
+	block[3]->brFalse = block[9];
 
 	block[4]->ins = {
 		IRStoreA(Reg8(3), RegPtr(0), RegPtr(1)),
@@ -239,7 +239,7 @@ Function MxBuiltin::builtin_getString()
 		IRCall(EmptyOperand(), IDExtSymbol(size_t(BuiltinSymbol::free)), {RegPtr(0)}),
 		IRReturn(ImmPtr(0)),
 	};
-	block[7]->brTrue = block[9];
+	block[7]->brTrue = block[10];
 
 	block[8]->ins = {
 		IRStoreA(Imm8('\0'), RegPtr(0), RegPtr(1)),
@@ -251,11 +251,18 @@ Function MxBuiltin::builtin_getString()
 		IR(RegPtr(12), Add, RegPtr(0), ImmPtr(objectHeader)),
 		IRReturn(RegPtr(12)),
 	};
-	block[8]->brTrue = block[9];
+	block[8]->brTrue = block[10];
+
+	block[9]->ins = {
+		IR(Reg8(13), Seq, RegPtr(1), ImmPtr(objectHeader + stringHeader)),
+		IRBranch(Reg8(13)),
+	};
+	block[9]->brTrue = block[1];		//if we read ' ' or '\n' and we didn't read any other char, we can continue the process
+	block[9]->brFalse = block[8];
 
 	Function ret;
 	ret.inBlock = block[0];
-	ret.outBlock = block[9];
+	ret.outBlock = block[10];
 	return ret;
 }
 
@@ -692,7 +699,7 @@ Function MxBuiltin::builtin_subscript_safe(size_t size)
 
 	block[0]->ins = {
 		IR(Reg8(2), Seq, RegPtr(0), ImmPtr(0)),
-		IRBranch(Reg8(2)),
+		IRBranch(Reg8(2), unlikely),
 	};
 	block[0]->brTrue = block[1];
 	block[0]->brFalse = block[2];

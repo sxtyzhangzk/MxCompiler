@@ -163,6 +163,50 @@ bool StaticTypeChecker::checkType(MxType type, ssize_t tokenL, ssize_t tokenR)
 	return true;
 }
 
+size_t StaticTypeChecker::findConstructor(size_t className, const std::vector<MxType> &vTypes)
+{
+	auto iterClass = mapClassMemberId.find(className);
+	assert(iterClass != mapClassMemberId.end());
+	auto iterFunc = iterClass->second.find(className);
+	if (iterFunc != iterClass->second.end())
+	{
+		const MxProgram::varInfo &vInfo = program->vClass[className].members[iterFunc->second];
+		if (vInfo.varType.mainType == MxType::Function)
+		{
+			std::vector<MxType> params = { MxType{MxType::Object, 0, className} };
+			std::copy(vTypes.begin(), vTypes.end(), std::back_inserter(params));
+			return findOverloadedFunc(vInfo.varType.funcOLID, params);
+		}
+	}
+	return size_t(-1);
+}
+
+size_t StaticTypeChecker::findOverloadedFunc(size_t olid, const std::vector<MxType> &vTypes)
+{
+	size_t matched = size_t(-1);
+	for (size_t funcID : program->vOverloadedFuncs[olid])
+	{
+		const auto &params = program->vFuncs[funcID].paramType;
+		if (params.size() != vTypes.size())
+			continue;
+
+		bool flag = true;
+		for (size_t i = 0; i < params.size(); i++)
+			if (params[i] != vTypes[i])
+			{
+				flag = false;
+				break;
+			}
+		if (flag)
+		{
+			if (matched != size_t(-1))
+				return size_t(-2);
+			matched = funcID;
+		}
+	}
+	return matched;
+}
+
 ASTNode * StaticTypeChecker::enter(MxAST::ASTDeclClass *declClass)
 {
 	curClass = declClass->className;
@@ -447,11 +491,35 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprAssignment *expr)
 
 ASTNode * StaticTypeChecker::leave(MxAST::ASTExprNew *expr)
 {
+	if (!expr->isArray && expr->exprType.mainType != MxType::Object)
+	{
+		issues->error(expr->tokenL, expr->tokenR,
+			"new expression of internal type is not supported");
+		return expr;
+	}
 	if (!expr->isArray && !expr->paramList.empty())
 	{
-		//FIXME
-		issues->fatal(expr->tokenL, expr->tokenR,
-			"Constructor with parameters not implemented");
+		std::vector<MxType> paramType;
+		for (auto &p : expr->paramList)
+		{
+			ASTExpr *expr = dynamic_cast<ASTExpr *>(p.get());
+			assert(expr);
+			paramType.push_back(expr->exprType);
+		}
+		size_t funcID = findConstructor(expr->exprType.className, paramType);
+		if (funcID == size_t(-2))
+		{
+			issues->error(expr->tokenL, expr->tokenR,
+				"ambiguous call to constuctor of " + symbols->vSymbol[expr->exprType.className]);
+			return expr;
+		}
+		if (funcID == size_t(-1))
+		{
+			issues->error(expr->tokenL, expr->tokenR,
+				"no matched constructor");
+			return expr;
+		}
+		expr->funcID = funcID;
 		return expr;
 	}
 	expr->vType = xvalue;
@@ -466,7 +534,13 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprNew *expr)
 			if (exprParam->exprType.mainType != MxType::Integer)
 				issues->error(exprParam->tokenL, exprParam->tokenR,
 					"expression in new-declarator must be integer");
-		}
+		}	
+	}
+	if (expr->exprType.mainType == MxType::Object)
+	{
+		size_t funcID = findConstructor(expr->exprType.className, {});
+		assert(funcID != size_t(-2));
+		expr->funcID = funcID;
 	}
 	return expr;
 }
@@ -527,6 +601,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprFuncCall *expr)
 	expr->vType = rvalue;
 	size_t olid = func->exprType.funcOLID;
 
+	//TODO: use findOverloadedFunc instead
 	bool matched = false;
 	for (size_t funcID : program->vOverloadedFuncs[olid])
 	{
