@@ -5,9 +5,6 @@
 #include "IssueCollector.h"
 #include "GlobalSymbol.h"
 #include "AST.h"
-#include <map>
-#include <stack>
-#include <set>
 
 class StaticTypeChecker : public MxAST::ASTListener
 {

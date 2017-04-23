@@ -1,3 +1,4 @@
+#include "common_headers.h"
 #include "StaticTypeChecker.h"
 #include "MxBuiltin.h"
 using namespace MxAST;

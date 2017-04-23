@@ -1,7 +1,5 @@
+#include "common_headers.h"
 #include "CodeGeneratorBasic.h"
-#include <set>
-#include <unordered_map>
-#include <sstream>
 using namespace MxIR;
 
 const std::string CodeGeneratorBasic::paramReg[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };

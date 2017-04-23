@@ -4,8 +4,6 @@
 #include "IR.h"
 #include "GlobalSymbol.h"
 #include "MxProgram.h"
-#include <string>
-#include <iostream>
 
 class IRVisualizer
 {

@@ -1,4 +1,6 @@
+#include "common_headers.h"
 #include "IssueCollector.h"
+#include <antlr4-runtime.h>
 
 IssueCollector *IssueCollector::defIC = nullptr;
 

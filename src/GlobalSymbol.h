@@ -2,9 +2,6 @@
 #define MX_COMPILER_GLOBAL_SYMBOL_H
 
 #include "common.h"
-#include <unordered_map>
-#include <vector>
-#include <string>
 
 struct GlobalSymbol
 {

@@ -1,6 +1,5 @@
+#include "common_headers.h"
 #include "IRGenerator.h"
-#include <unordered_map>
-#include <utility>
 using namespace MxAST;
 using namespace MxIR;
 

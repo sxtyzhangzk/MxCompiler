@@ -1,14 +1,10 @@
 #ifndef MX_COMPILER_CODE_GENERATOR_BASIC_H
 #define MX_COMPILER_CODE_GENERATOR_BASIC_H
 
+#include "common.h"
 #include "IR.h"
 #include "MxProgram.h"
 #include "GlobalSymbol.h"
-#include <iostream>
-#include <vector>
-#include <string>
-#include <utility>
-#include <map>
 
 class CodeGeneratorBasic
 {

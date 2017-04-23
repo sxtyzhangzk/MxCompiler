@@ -2,10 +2,11 @@
 #define MX_COMPILER_ERROR_COLLECTOR_H
 
 #include "common.h"
-#include <antlr4-runtime.h>
-#include <iostream>
-#include <vector>
-#include <string>
+
+namespace antlr4
+{
+	class TokenStream;
+}
 
 class IssueCollector
 {

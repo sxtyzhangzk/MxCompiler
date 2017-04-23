@@ -1,7 +1,5 @@
+#include "common_headers.h"
 #include "IRVisualizer.h"
-#include <sstream>
-#include <unordered_map>
-#include <vector>
 using namespace MxIR;
 
 std::string IRVisualizer::toString(const Operand &operand)

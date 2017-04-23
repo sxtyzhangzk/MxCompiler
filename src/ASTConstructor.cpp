@@ -1,5 +1,5 @@
+#include "common_headers.h"
 #include "ASTConstructor.h"
-#include <sstream>
 using namespace MxAST;
 
 ASTRoot * ASTConstructor::constructAST(MxParser::ProgContext *prog, GlobalSymbol *symbolTable)

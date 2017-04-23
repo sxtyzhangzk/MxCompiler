@@ -5,7 +5,6 @@
 #include "GlobalSymbol.h"
 #include "IssueCollector.h"
 #include <MxParserBaseVisitor.h>
-#include <memory>
 
 class ASTConstructor : protected MxParserBaseVisitor
 {

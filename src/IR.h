@@ -2,13 +2,6 @@
 #define MX_COMPILER_IR_H
 
 #include "common.h"
-#include <cstdint>
-#include <list>
-#include <memory>
-#include <vector>
-#include <set>
-#include <queue>
-#include <functional>
 
 namespace MxIR
 {

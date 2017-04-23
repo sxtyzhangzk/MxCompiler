@@ -1,8 +1,6 @@
 #ifndef MX_COMPILER_AST_VISUALIZER_H
 #define MX_COMPILER_AST_VISUALIZER_H
 
-#include <iostream>
-#include <string>
 #include "AST.h"
 #include "GlobalSymbol.h"
 

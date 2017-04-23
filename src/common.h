@@ -7,11 +7,7 @@
 #define IF_DEBUG(x)
 #endif
 
-#include <cassert>
-#include <antlr4-common.h>
-#include <string>
-#include <vector>
-#include <iostream>
+#include "common_headers.h"
 
 constexpr size_t MAX_ERROR = 100;
 constexpr size_t MAX_STRINGSIZE = 100000;
@@ -134,6 +130,5 @@ void prints(std::ostream &out, Tnow &&now, T&&... val)
 	out << std::forward<Tnow>(now);
 	prints(out, std::forward<T>(val)...);
 }
-
 
 #endif

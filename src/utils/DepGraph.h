@@ -1,6 +1,7 @@
 #ifndef MX_COMPILER_UTILS_DEP_GRAPH_H
 #define MX_COMPILER_UTILS_DEP_GRAPH_H
 
+#include "common.h"
 #include <vector>
 
 class DepGraph

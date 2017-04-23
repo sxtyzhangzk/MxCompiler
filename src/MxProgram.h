@@ -3,9 +3,6 @@
 
 #include "common.h"
 #include "IR.h"
-#include <vector>
-#include <map>
-#include <set>
 
 enum FuncAttribute : std::uint32_t
 {

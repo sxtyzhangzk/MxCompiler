@@ -6,8 +6,6 @@
 #include "MxProgram.h"
 #include "IssueCollector.h"
 #include "MxBuiltin.h"
-#include <stack>
-#include <map>
 
 class IRGenerator : protected MxAST::ASTVisitor
 {

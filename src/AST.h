@@ -2,10 +2,6 @@
 #define MX_COMPILER_AST_H
 
 #include "common.h"
-#include <vector>
-#include <string>
-#include <memory>
-#include <unordered_map>
 
 namespace MxAST
 {

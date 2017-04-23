@@ -1,6 +1,6 @@
+#include "common_headers.h"
 #include <MxLexer.h>
 #include <MxParser.h>
-#include <iostream>
 #include "AST.h"
 #include "ASTConstructor.h"
 #include "IssueCollector.h"
@@ -9,7 +9,6 @@
 #include "ConstantFold.h"
 #include "IRGenerator.h"
 #include "CodeGeneratorBasic.h"
-#include <vector>
 #include <boost/program_options.hpp>
 using namespace std;
 

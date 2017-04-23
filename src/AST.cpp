@@ -1,3 +1,4 @@
+#include "common_headers.h"
 #include "AST.h"
 
 namespace MxAST
