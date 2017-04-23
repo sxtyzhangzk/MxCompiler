@@ -1,19 +1,11 @@
 CFLAGS := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -O1 -DNDEBUG
 CFLAGS_O0 := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -DNDEBUG
 
-mxcompiler: libantlr4-runtime.a libboost_program_options.a common_headers.h.gch MxLexer.o MxParser.o MxParserBaseVisitor.o MxParserVisitor.o AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o
-	g++ MxLexer.o MxParser.o MxParserBaseVisitor.o MxParserVisitor.o AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
+mxcompiler: libantlr4-runtime.a antlr_generated.a libboost_program_options.a common_headers.h.gch AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o
+	g++ AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o antlr_generated.a libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
 
 common_headers.h.gch: ../src/common_headers.h
 	g++ ../src/common_headers.h -o common_headers.h.gch $(CFLAGS)
-MxLexer.o: generated/MxLexer.cpp
-	g++ -c generated/MxLexer.cpp -o MxLexer.o $(CFLAGS)
-MxParser.o: generated/MxParser.cpp generated/MxParser.h
-	g++ -c generated/MxParser.cpp -o MxParser.o $(CFLAGS)
-MxParserBaseVisitor.o: generated/MxParserBaseVisitor.cpp
-	g++ -c generated/MxParserBaseVisitor.cpp -o MxParserBaseVisitor.o $(CFLAGS_O0)
-MxParserVisitor.o: generated/MxParserVisitor.cpp
-	g++ -c generated/MxParserVisitor.cpp -o MxParserVisitor.o $(CFLAGS_O0)
 
 AST.o: ../src/AST.cpp
 	g++ -c ../src/AST.cpp -o AST.o $(CFLAGS)
