@@ -128,11 +128,14 @@ protected:
 	MxIR::Function builtin_substring();
 	MxIR::Function builtin_parseInt();
 	MxIR::Function builtin_ord_safe();
+	MxIR::Function builtin_ord_unsafe();
 	MxIR::Function builtin_size();
+	MxIR::Function builtin_size_unsafe();
 	MxIR::Function builtin_runtime_error();
 	MxIR::Function builtin_strcat();
 	MxIR::Function builtin_strcmp();
 	MxIR::Function builtin_subscript_safe(size_t size);
+	MxIR::Function builtin_subscript_unsafe(size_t size);
 	MxIR::Function builtin_newobject();
 	MxIR::Function builtin_newobject_zero();
 

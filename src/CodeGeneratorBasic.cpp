@@ -190,6 +190,7 @@ void CodeGeneratorBasic::generateConst(const MxProgram::constInfo &cinfo, const 
 
 void CodeGeneratorBasic::generateVar(const MxProgram::varInfo &vinfo, const std::string &label)
 {
+	//TODO: align global var
 	writeLabel(label);
 	writeCode("resb ", vinfo.varType.getSize());
 }

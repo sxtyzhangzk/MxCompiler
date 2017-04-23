@@ -1,4 +1,4 @@
 cd build
 cat > program.mx
-./mxcompiler program.mx program.asm
+./mxcompiler program.mx -o program.asm --fdisable-access-protect
 cat program.asm

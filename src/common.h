@@ -83,6 +83,21 @@ struct MxType
 	}
 };
 
+class CompileFlags
+{
+public:
+	bool disable_access_protect;
+
+	static CompileFlags * getInstance()
+	{
+		static CompileFlags instance;
+		return &instance;
+	}
+private:
+	CompileFlags() : disable_access_protect(false) {}
+	CompileFlags(const CompileFlags &other) = delete;
+};
+
 inline std::string transferHTML(const std::string &in)
 {
 	std::string ret;
@@ -112,8 +127,7 @@ constexpr std::uint64_t alignAddr(std::uint64_t addr, std::uint64_t align)
 	return (addr + align - 1) / align * align;
 }
 
-template<typename ...T>
-void prints(std::ostream &out, T&&... val) {}
+inline void prints(std::ostream &out) {}
 
 template<typename Tnow, typename ...T>
 void prints(std::ostream &out, Tnow &&now, T&&... val)
