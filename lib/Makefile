@@ -1,4 +1,5 @@
 CFLAGS := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -O1 -DNDEBUG
+CFLAGS_O0 := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -DNDEBUG
 
 mxcompiler: libantlr4-runtime.a MxLexer.o MxParser.o MxParserBaseVisitor.o MxParserVisitor.o AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o
 	g++ MxLexer.o MxParser.o MxParserBaseVisitor.o MxParserVisitor.o AST.o ASTConstructor.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o IRGenerator.o IssueCollector.o main.o MxBuiltin.o MxProgram.o StaticTypeChecker.o libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
@@ -8,9 +9,9 @@ MxLexer.o: generated/MxLexer.cpp
 MxParser.o: generated/MxParser.cpp generated/MxParser.h
 	g++ -c generated/MxParser.cpp -o MxParser.o $(CFLAGS)
 MxParserBaseVisitor.o: generated/MxParserBaseVisitor.cpp
-	g++ -c generated/MxParserBaseVisitor.cpp -o MxParserBaseVisitor.o $(CFLAGS)
+	g++ -c generated/MxParserBaseVisitor.cpp -o MxParserBaseVisitor.o $(CFLAGS_O0)
 MxParserVisitor.o: generated/MxParserVisitor.cpp
-	g++ -c generated/MxParserVisitor.cpp -o MxParserVisitor.o $(CFLAGS)
+	g++ -c generated/MxParserVisitor.cpp -o MxParserVisitor.o $(CFLAGS_O0)
 
 AST.o: ../src/AST.cpp
 	g++ -c ../src/AST.cpp -o AST.o $(CFLAGS)
@@ -25,9 +26,9 @@ GlobalSymbol.o: ../src/GlobalSymbol.cpp
 IRGenerator.o: ../src/IRGenerator.cpp
 	g++ -c ../src/IRGenerator.cpp -o IRGenerator.o $(CFLAGS)
 IssueCollector.o: ../src/IssueCollector.cpp
-	g++ -c ../src/IssueCollector.cpp -o IssueCollector.o $(CFLAGS)
+	g++ -c ../src/IssueCollector.cpp -o IssueCollector.o $(CFLAGS_O0)
 main.o: ../src/main.cpp
-	g++ -c ../src/main.cpp -o main.o $(CFLAGS)
+	g++ -c ../src/main.cpp -o main.o $(CFLAGS_O0)
 MxBuiltin.o: ../src/MxBuiltin.cpp
 	g++ -c ../src/MxBuiltin.cpp -o MxBuiltin.o $(CFLAGS)
 MxProgram.o: ../src/MxProgram.cpp

@@ -1,14 +1,13 @@
 #ifndef MX_COMPILER_COMMON_H
 #define MX_COMPILER_COMMON_H
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(NDEBUG)
 #define IF_DEBUG(x) x
-#include <cassert>
 #else
 #define IF_DEBUG(x)
-#define assert(expr) ((void)0)
 #endif
 
+#include <cassert>
 #include <antlr4-common.h>
 #include <string>
 #include <vector>
