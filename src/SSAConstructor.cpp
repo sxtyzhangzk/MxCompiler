@@ -217,15 +217,15 @@ namespace MxIR
 				*in = varCurVersion[in->val].top();
 			}
 
-			if (ins.oper != Store && ins.oper != StoreA && ins.dst.isReg())
+			for (Operand *out : ins.getOutputReg())
 			{
-				ins.dst.ver = ++varCount[ins.dst.val];
+				out->ver = ++varCount[out->val];
 
-				if (!killed.count(ins.dst.val))
-					killed.insert(ins.dst.val);
+				if (!killed.count(out->val))
+					killed.insert(out->val);
 				else
-					varCurVersion[ins.dst.val].pop();
-				varCurVersion[ins.dst.val].push(ins.dst);
+					varCurVersion[out->val].pop();
+				varCurVersion[out->val].push(*out);
 			}
 		}
 
