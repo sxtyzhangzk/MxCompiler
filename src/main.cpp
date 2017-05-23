@@ -10,6 +10,8 @@
 #include "IRGenerator.h"
 #include "CodeGeneratorBasic.h"
 #include "option_parser.h"
+#include "SSAConstructor.h"
+#include "CodeGenerator.h"
 using namespace std;
 
 int compile(const std::string &fileName, const std::string &output)
@@ -57,9 +59,19 @@ int compile(const std::string &fileName, const std::string &output)
 		if (ic.cntError > 0)
 			return 2;
 
-		std::ofstream fout(output);
-		CodeGeneratorBasic codegen(fout);
-		codegen.generateProgram();
+		if (CompileFlags::getInstance()->optim_register_allocation)
+		{
+			MxIR::SSAConstructor::constructSSA(&program);
+			std::ofstream fout(output);
+			CodeGenerator codegen(fout);
+			codegen.generateProgram();
+		}
+		else
+		{
+			std::ofstream fout(output);
+			CodeGeneratorBasic codegen(fout);
+			codegen.generateProgram();
+		}
 	}
 	catch (IssueCollector::FatalErrorException &)
 	{

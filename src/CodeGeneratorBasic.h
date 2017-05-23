@@ -16,25 +16,21 @@ public:
 
 protected:
 	void createLabel();
-	std::string decorateFuncName(const MxProgram::funcInfo &finfo);
-	void generateFunc(const MxProgram::funcInfo &finfo, const std::string &label);
-	void generateConst(const MxProgram::constInfo &cinfo, const std::string &label);
-	void generateVar(const MxProgram::varInfo &vinfo, const std::string &label);
+	virtual std::string decorateFuncName(const MxProgram::funcInfo &finfo);
+	virtual void generateFunc(MxProgram::funcInfo &finfo, const std::string &label);
+	virtual void generateConst(const MxProgram::constInfo &cinfo, const std::string &label);
+	virtual void generateVar(const MxProgram::varInfo &vinfo, const std::string &label);
 
+	virtual std::vector<MxIR::Block *> sortBlocks(MxIR::Block *inBlock);
+	virtual void translateBlocks(const std::vector<MxIR::Block *> &vBlocks);
+	virtual void translateIns(MxIR::Instruction ins);
 
-	std::vector<MxIR::Block *> sortBlocks(MxIR::Block *inBlock);
-	void translateBlocks(const std::vector<MxIR::Block *> &vBlocks);
-	void translateIns(MxIR::Instruction ins);
 	std::string loadOperand(int id, MxIR::Operand src);
 	void loadOperand(std::string reg, MxIR::Operand src);
 	std::string getConst(MxIR::Operand src, bool immSigned = true, int tempreg = 11);
 	std::string getVReg(MxIR::Operand src);
 	std::string getVRegAddr(MxIR::Operand src);
 	std::string storeOperand(MxIR::Operand dst, int id);
-
-
-	static std::string regName(int id, size_t size);
-	static std::string sizeName(size_t size);
 
 	template<typename ...T>
 	void writeCode(T&&... val)

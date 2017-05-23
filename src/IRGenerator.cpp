@@ -132,10 +132,13 @@ Function IRGenerator::generate(ASTDeclFunc *declFunc)
 	}
 	for (size_t i = 0; i < finfo.paramType.size(); i++)
 	{
+		if (i == 0 && finfo.isThiscall)
+			continue;
 		ret.params.push_back(RegByType(i, finfo.paramType[i]));
 	}
 
-	ret.inBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	returnBlock = Block::construct();
 	std::shared_ptr<Block> currentBlock = ret.inBlock;
 	for (auto &stat : declFunc->stats)
 	{
@@ -146,10 +149,13 @@ Function IRGenerator::generate(ASTDeclFunc *declFunc)
 	}
 
 	if (currentBlock->ins.empty() || currentBlock->ins.back().oper != Operation::Return)
+	{
 		currentBlock->ins.push_back(IRReturn());
-	ret.outBlock.reset(new Block);
+		currentBlock->brTrue = returnBlock;
+	}
+	ret.outBlock = std::move(returnBlock);
 
-	redirectReturn(ret.inBlock, ret.outBlock);
+	//redirectReturn(ret.inBlock, ret.outBlock);
 	return ret;
 }
 
@@ -169,7 +175,7 @@ void IRGenerator::visit(ASTDeclVar *declVar)
 {
 	if (declVar->initVal)
 	{
-		std::shared_ptr<Block> blk(new Block);
+		std::shared_ptr<Block> blk(Block::construct());
 		std::shared_ptr<Block> cur = blk;
 		setFlag(Read);
 		//declVar->initVal->accept(this);
@@ -331,7 +337,7 @@ void IRGenerator::visit(ASTExprBinary *binary)
 {
 	assert(!(visFlag & Write));
 
-	std::shared_ptr<Block> blkIn(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 	if (!visFlag)
 	{
@@ -354,7 +360,7 @@ void IRGenerator::visit(ASTExprBinary *binary)
 
 	if (binary->oper == ASTExprBinary::And || binary->oper == ASTExprBinary::Or)
 	{
-		std::shared_ptr<Block> blkNext(new Block), blkSkip(new Block), blkFinal(new Block);
+		std::shared_ptr<Block> blkNext(Block::construct()), blkSkip(Block::construct()), blkFinal(Block::construct());
 
 		setFlag(Read);
 		//binary->operandL->accept(this);
@@ -364,20 +370,30 @@ void IRGenerator::visit(ASTExprBinary *binary)
 		merge(cur);
 		//Operand cond = Reg8(regNum++);
 		//cur->ins.push_back(IR(cond, Sne, lastOperand, ImmByType(0, operandL->exprType)));
+		Operand retVal;
+		if (visFlag & Read)
+			retVal = Reg8(regNum++);
 		cur->ins.push_back(IRBranch(lastOperand));
 
-		Operand skipVal;
 		if (binary->oper == ASTExprBinary::And)
 		{
 			cur->brTrue = blkNext;
 			cur->brFalse = (visFlag & Read) ? blkSkip : blkFinal;
-			skipVal = Imm8(0);
+			blkSkip->ins = {
+				IR(retVal, Move, Imm8(0)),
+				IRJump(),
+			};
+			blkSkip->brTrue = blkFinal;
 		}
 		else
 		{
 			cur->brTrue = (visFlag & Read) ? blkSkip : blkFinal;
 			cur->brFalse = blkNext;
-			skipVal = Imm8(1);
+			blkSkip->ins = {
+				IR(retVal, Move, Imm8(1)),
+				IRJump(),
+			};
+			blkSkip->brTrue = blkFinal;
 		}
 
 		cur = blkNext;
@@ -385,18 +401,14 @@ void IRGenerator::visit(ASTExprBinary *binary)
 		visitExprRec(binary->operandR.get());
 		merge(cur);
 
+		cur->ins.push_back(IR(retVal, Move, lastOperand));
 		cur->ins.push_back(IRJump());
 		cur->brTrue = blkFinal;
 
 		if (visFlag & Read)
-		{
-			blkSkip->ins = {
-				IR(lastOperand, Move, skipVal),
-				IRJump(),
-			};
-			blkSkip->brTrue = blkFinal;
-		}
-
+			lastOperand = retVal;
+		else
+			lastOperand = EmptyOperand();
 		lastBlockIn = std::move(blkIn);
 		lastBlockOut = std::move(blkFinal);
 		lastWriteAddr = EmptyOperand();
@@ -460,7 +472,7 @@ void IRGenerator::visit(ASTExprBinary *binary)
 
 void IRGenerator::visit(ASTExprAssignment *assign)
 {
-	std::shared_ptr<Block> blkIn(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 
 	setFlag(Read);
@@ -493,7 +505,7 @@ void IRGenerator::visit(ASTExprAssignment *assign)
 
 void IRGenerator::visit(ASTExprNew *exprNew)
 {
-	std::shared_ptr<Block> blkIn(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 	std::vector<Operand> param;
 
@@ -513,7 +525,7 @@ void IRGenerator::visit(ASTExprNew *exprNew)
 
 	auto genNewObject = [this](size_t objSize, Operand typeID, size_t funcID, const std::vector<Operand> &params) -> rettype
 	{
-		std::shared_ptr<Block> blk(new Block);
+		std::shared_ptr<Block> blk(Block::construct());
 
 		Operand addrObj = RegPtr(regNum++);
 		blk->ins = { 
@@ -532,7 +544,7 @@ void IRGenerator::visit(ASTExprNew *exprNew)
 	auto genNew1DArray = [exprNew, this]
 	(Operand elementNum, size_t elementSize, Operand typeID, std::function<rettype()> funcInit) -> rettype	//generate 1-dim array
 	{
-		std::shared_ptr<Block> blkIn(new Block);
+		std::shared_ptr<Block> blkIn(Block::construct());
 		Operand tmpElementNum = RegPtr(regNum++);
 		Operand tmpSize = RegPtr(regNum++);
 		Operand addrArray = RegPtr(regNum++);
@@ -546,7 +558,7 @@ void IRGenerator::visit(ASTExprNew *exprNew)
 		};
 		if (funcInit)
 		{
-			std::shared_ptr<Block> blkCond(new Block), blkFinal(new Block);
+			std::shared_ptr<Block> blkCond(Block::construct()), blkFinal(Block::construct());
 			Operand tmpOffset = RegPtr(regNum++);
 			blkIn->ins.push_back(IR(tmpOffset, Move, ImmPtr(8)));
 			blkIn->ins.push_back(IRJump());
@@ -610,7 +622,7 @@ void IRGenerator::visit(ASTExprNew *exprNew)
 
 void IRGenerator::visit(ASTExprSubscriptAccess *exprSub)
 {
-	std::shared_ptr<Block> blkIn(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 	if (!visFlag)
 	{
@@ -724,6 +736,8 @@ void IRGenerator::visit(ASTExprFuncCall *expr)
 
 void IRGenerator::visit(ASTStatementReturn *stat)
 {
+	std::shared_ptr<Block> blk(Block::construct());
+	std::shared_ptr<Block> cur = blk;
 	if (stat->retExpr)
 	{
 		ASTExpr *expr = dynamic_cast<ASTExpr *>(stat->retExpr.get());
@@ -732,19 +746,22 @@ void IRGenerator::visit(ASTStatementReturn *stat)
 		//stat->retExpr->accept(this);
 		visitExpr(stat->retExpr.get());
 		resumeFlag();
+		merge(cur);
 		
-		std::list<Instruction> &insList = lastBlockOut ? lastBlockOut->ins : lastIns;
 		if (expr->exprType.isObject())
-			insList.push_back(IRCall(EmptyOperand(), IDFunc(size_t(MxBuiltin::BuiltinFunc::addref_object)), { lastOperand }));
-		insList.push_back(IRReturn(lastOperand));
+			cur->ins.push_back(IRCall(EmptyOperand(), IDFunc(size_t(MxBuiltin::BuiltinFunc::addref_object)), { lastOperand }));
+		cur->ins.push_back(IRReturn(lastOperand));
 	}
 	else
-		lastIns = { IRReturn() };
+		cur->ins = { IRReturn() };
+	cur->brTrue = returnBlock;
+	lastBlockIn = std::move(blk);
+	lastBlockOut = std::move(cur);
 }
 
 void IRGenerator::visit(ASTStatementBreak *stat)
 {
-	std::shared_ptr<Block> blk(new Block);
+	std::shared_ptr<Block> blk(Block::construct());
 	blk->ins = { IRJump() };
 	blk->brTrue = loopBreak;
 	lastBlockIn = blk;
@@ -753,7 +770,7 @@ void IRGenerator::visit(ASTStatementBreak *stat)
 
 void IRGenerator::visit(ASTStatementContinue *stat)
 {
-	std::shared_ptr<Block> blk(new Block);
+	std::shared_ptr<Block> blk(Block::construct());
 	blk->ins = { IRJump() };
 	blk->brTrue = loopContinue;
 	lastBlockIn = blk;
@@ -762,7 +779,7 @@ void IRGenerator::visit(ASTStatementContinue *stat)
 
 void IRGenerator::visit(ASTStatementIf *stat)
 {
-	std::shared_ptr<Block> blkIn(new Block), blkTrue(new Block), blkFalse(new Block), blkFinal(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct()), blkTrue(Block::construct()), blkFalse(Block::construct()), blkFinal(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 
 	setFlag(Read);
@@ -810,7 +827,7 @@ void IRGenerator::visit(ASTStatementIf *stat)
 
 void IRGenerator::visit(ASTStatementWhile *stat)
 {
-	std::shared_ptr<Block> blkIn(new Block), blkCond(new Block), blkBody(new Block), blkFinal(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct()), blkCond(Block::construct()), blkBody(Block::construct()), blkFinal(Block::construct());
 	blkIn->ins = { IRJump() };
 	blkIn->brTrue = blkCond;
 	std::shared_ptr<Block> cur = blkCond;
@@ -824,6 +841,8 @@ void IRGenerator::visit(ASTStatementWhile *stat)
 	cur->ins.push_back(IRBranch(cond));
 	cur->brTrue = blkBody;
 	cur->brFalse = blkFinal;
+	std::shared_ptr<Block> oldBreak = std::move(loopBreak);
+	std::shared_ptr<Block> oldContinue = std::move(loopContinue);
 	loopBreak = blkFinal;
 	loopContinue = blkCond;
 
@@ -839,13 +858,13 @@ void IRGenerator::visit(ASTStatementWhile *stat)
 
 	lastBlockIn = std::move(blkIn);
 	lastBlockOut = std::move(blkFinal);
-	loopBreak.reset();
-	loopContinue.reset();
+	loopBreak = std::move(oldBreak);
+	loopContinue = std::move(oldContinue);
 }
 
 void IRGenerator::visit(ASTStatementFor *stat)
 {
-	std::shared_ptr<Block> blkIn(new Block), blkCond(new Block), blkBody(new Block), blkStep(new Block), blkFinal(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct()), blkCond(Block::construct()), blkBody(Block::construct()), blkStep(Block::construct()), blkFinal(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 
 	if (stat->exprIn)
@@ -881,6 +900,8 @@ void IRGenerator::visit(ASTStatementFor *stat)
 	}
 
 	cur = blkBody;
+	std::shared_ptr<Block> oldBreak = std::move(loopBreak);
+	std::shared_ptr<Block> oldContinue = std::move(loopContinue);
 	loopBreak = blkFinal;
 	loopContinue = blkStep;
 	visit(static_cast<ASTBlock *>(stat));
@@ -902,8 +923,8 @@ void IRGenerator::visit(ASTStatementFor *stat)
 
 	lastBlockIn = std::move(blkIn);
 	lastBlockOut = std::move(blkFinal);
-	loopBreak.reset();
-	loopContinue.reset();
+	loopBreak = std::move(oldBreak);
+	loopContinue = std::move(oldContinue);
 }
 
 void IRGenerator::visit(ASTStatementExpr *stat)
@@ -915,7 +936,7 @@ void IRGenerator::visit(ASTStatementExpr *stat)
 
 void IRGenerator::visit(ASTBlock *block)
 {
-	std::shared_ptr<Block> blk(new Block);
+	std::shared_ptr<Block> blk(Block::construct());
 	std::shared_ptr<Block> cur = blk;
 
 	for (auto &stat : block->stats)
@@ -933,7 +954,7 @@ void IRGenerator::visit(ASTBlock *block)
 void IRGenerator::generateFuncCall(size_t funcID, const std::vector<ASTExpr *> &param)
 {
 	assert(!(visFlag & Write));
-	std::shared_ptr<Block> blk(new Block);
+	std::shared_ptr<Block> blk(Block::construct());
 	std::shared_ptr<Block> cur = blk;
 	const MxProgram::funcInfo &finfo = program->vFuncs[funcID];
 	if (!visFlag && (finfo.attribute & NoSideEffect))
@@ -992,7 +1013,7 @@ void IRGenerator::visitExprRec(ASTNode *node)
 
 void IRGenerator::visitExpr(ASTNode *node)
 {
-	std::shared_ptr<Block> blk(new Block);
+	std::shared_ptr<Block> blk(Block::construct());
 	std::shared_ptr<Block> cur = blk;
 	visitExprRec(node);
 	merge(cur);
@@ -1071,7 +1092,7 @@ void IRGenerator::generateProgram(MxAST::ASTRoot *root)
 		program->vConst.push_back(MxBuiltin::string2Const(symbol->vString[i]));
 	}
 
-	std::shared_ptr<Block> blkIn(new Block);
+	std::shared_ptr<Block> blkIn(Block::construct());
 	std::shared_ptr<Block> cur = blkIn;
 
 	regNum = 0;
@@ -1104,7 +1125,7 @@ void IRGenerator::generateProgram(MxAST::ASTRoot *root)
 
 	Function funcStart;
 	funcStart.inBlock = std::move(blkIn);
-	funcStart.outBlock.reset(new Block);
+	funcStart.outBlock = Block::construct();
 	redirectReturn(funcStart.inBlock, funcStart.outBlock);
 
 	program->vFuncs[size_t(MxBuiltin::BuiltinFunc::initialize)].content = std::move(funcStart);

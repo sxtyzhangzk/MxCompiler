@@ -385,14 +385,14 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprUnary *expr)
 	assert(operand);
 	if (expr->oper == ASTExprUnary::Not)
 	{
-		if (operand->exprType.mainType != MxType::Bool)
+		if (operand->exprType != MxType{ MxType::Bool })
 			issues->error(expr->tokenL, expr->tokenR,
 				"bool type required");
 		expr->exprType = MxType{ MxType::Bool };
 	}
 	else
 	{
-		if (operand->exprType.mainType != MxType::Integer)
+		if (operand->exprType != MxType{ MxType::Integer })
 			issues->error(expr->tokenL, expr->tokenR,
 				"integer type required");
 		expr->exprType = MxType{ MxType::Integer };
@@ -419,9 +419,9 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprBinary *expr)
 	switch (expr->oper)
 	{
 	case ASTExprBinary::Plus: 
-		if (operandL->exprType.mainType == MxType::Integer && operandR->exprType.mainType == MxType::Integer)
+		if (operandL->exprType == MxType{ MxType::Integer } && operandR->exprType == MxType{ MxType::Integer })
 			expr->exprType = MxType{ MxType::Integer };
-		else if (operandL->exprType.mainType == MxType::String && operandR->exprType.mainType == MxType::String)
+		else if (operandL->exprType == MxType{ MxType::String } && operandR->exprType == MxType{ MxType::String })
 		{
 			expr->exprType = MxType{ MxType::String };
 			expr->vType = xvalue;
@@ -434,14 +434,14 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprBinary *expr)
 	case ASTExprBinary::Minus: case ASTExprBinary::Multiple: case ASTExprBinary::Divide:
 	case ASTExprBinary::Mod: case ASTExprBinary::ShiftLeft: case ASTExprBinary::ShiftRight:
 	case ASTExprBinary::BitAnd: case ASTExprBinary::BitXor: case ASTExprBinary::BitOr:
-		if (operandL->exprType.mainType != MxType::Integer || operandR->exprType.mainType != MxType::Integer)
+		if (operandL->exprType != MxType{ MxType::Integer } || operandR->exprType != MxType{ MxType::Integer })
 			issues->error(expr->tokenL, expr->tokenR,
 				"Both operands need to be integer");
 		expr->exprType = MxType{ MxType::Integer };
 		break;
 
 	case ASTExprBinary::And: case ASTExprBinary::Or:
-		if (operandL->exprType.mainType != MxType::Bool || operandR->exprType.mainType != MxType::Bool)
+		if (operandL->exprType != MxType{ MxType::Bool } || operandR->exprType != MxType{ MxType::Bool })
 			issues->error(expr->tokenL, expr->tokenR,
 				"Both operands need to be bool");
 		expr->exprType = MxType{ MxType::Bool };
@@ -449,7 +449,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprBinary *expr)
 
 	case ASTExprBinary::Equal: case ASTExprBinary::NotEqual:
 		expr->exprType = MxType{ MxType::Bool };
-		if (operandL->exprType.mainType == MxType::Void || operandR->exprType.mainType == MxType::Void)
+		if (operandL->exprType == MxType{ MxType::Void } || operandR->exprType == MxType{ MxType::Void })
 			issues->error(expr->tokenL, expr->tokenR,
 				"Cannot compare void type");
 		if (operandL->exprType != operandR->exprType)
@@ -460,8 +460,8 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprBinary *expr)
 	case ASTExprBinary::LessEqual: case ASTExprBinary::LessThan:
 	case ASTExprBinary::GreaterEqual: case ASTExprBinary::GreaterThan:
 		expr->exprType = MxType{ MxType::Bool };
-		if(!((operandL->exprType.mainType == MxType::Integer && operandR->exprType.mainType == MxType::Integer) ||
-			(operandL->exprType.mainType == MxType::String && operandR->exprType.mainType == MxType::String)))
+		if (!((operandL->exprType == MxType{ MxType::Integer } && operandR->exprType == MxType{ MxType::Integer }) ||
+			(operandL->exprType == MxType{ MxType::String } && operandR->exprType == MxType{ MxType::String })))
 			issues->error(expr->tokenL, expr->tokenR,
 				"Both operands need to be integer or string");
 		break;
@@ -479,7 +479,7 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprAssignment *expr)
 	if (operandL->vType != lvalue)
 		issues->error(expr->tokenL, expr->tokenR,
 			"lvalue required as left operand of assignment");
-	if (operandR->exprType.mainType == MxType::Void)
+	if (operandR->exprType == MxType{ MxType::Void })
 		issues->error(expr->tokenL, expr->tokenR,
 			"void type is not ignored as it ought to be");
 	if (operandL->exprType != operandR->exprType)

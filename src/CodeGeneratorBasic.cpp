@@ -1,5 +1,6 @@
 #include "common_headers.h"
 #include "CodeGeneratorBasic.h"
+#include "ASM.h"
 using namespace MxIR;
 
 const std::string CodeGeneratorBasic::paramReg[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
@@ -68,7 +69,7 @@ std::string CodeGeneratorBasic::decorateFuncName(const MxProgram::funcInfo &finf
 	return ss.str();
 }
 
-void CodeGeneratorBasic::generateFunc(const MxProgram::funcInfo &finfo, const std::string &label)
+void CodeGeneratorBasic::generateFunc(MxProgram::funcInfo &finfo, const std::string &label)
 {
 	writeLabel(label);
 
@@ -281,8 +282,7 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 				assert(i == --block->ins.end());
 				size_t trueIdx = mapBlocks.find(block->brTrue.get())->second;
 				size_t falseIdx = mapBlocks.find(block->brFalse.get())->second;
-				std::string tempReg = loadOperand(0, i->src1);	//FIXME: src1 may be imm
-				writeCode("test ", tempReg, ", ", tempReg);
+				translateIns(*i);
 				if (trueIdx == idx + 1)
 					writeCode("jz L", cntLocalLabel + falseIdx);
 				else if (falseIdx == idx + 1)
@@ -298,56 +298,6 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 		}
 	}
 	cntLocalLabel += vBlocks.size();
-}
-
-std::string CodeGeneratorBasic::regName(int id, size_t size)
-{
-	static const std::string regTable[8][4] = {
-		{"al", "ax", "eax", "rax"},
-		{"cl", "cx", "ecx", "rcx"},
-		{"dl", "dx", "edx", "rdx"},
-		{"bl", "bx", "ebx", "rbx"},
-		{"spl", "sp", "esp", "rsp"},
-		{"bpl", "bp", "ebp", "rbp"},
-		{"sil", "si", "esi", "rsi"},
-		{"dil", "di", "edi", "rdi"},
-	};
-	if (id < 8)
-	{
-		if (size == 1)
-			return regTable[id][0];
-		if (size == 2)
-			return regTable[id][1];
-		if (size == 4)
-			return regTable[id][2];
-		assert(size == 8);
-		return regTable[id][3];
-	}
-	std::stringstream ss;
-	ss << "r" << id;
-	if (size == 1)
-		ss << "b";
-	else if (size == 2)
-		ss << "w";
-	else if (size == 4)
-		ss << "d";
-	else
-	{
-		assert(size == 8);
-	}
-	return ss.str();
-}
-
-std::string CodeGeneratorBasic::sizeName(size_t size)
-{
-	if (size == 1)
-		return "byte";
-	if (size == 2)
-		return "word";
-	if (size == 4)
-		return "dword";
-	assert(size == 8);
-	return "qword";
 }
 
 std::string CodeGeneratorBasic::loadOperand(int id, MxIR::Operand src)
@@ -456,7 +406,7 @@ void CodeGeneratorBasic::translateIns(Instruction ins)
 {
 	static const std::unordered_map<int, std::string> mapInsBinary = {
 		{Add, "add"}, {Sub, "sub"}, {Mult, "imul"},
-		{Shl, "shl"}, {Shr, "shr"}, 
+		//
 		{And, "and"}, {Or, "or"}, {Xor, "xor"}};
 	static const std::unordered_map<int, std::string> mapInsUnary = {
 		{Neg, "neg"}, {Not, "not"}};
@@ -487,6 +437,29 @@ void CodeGeneratorBasic::translateIns(Instruction ins)
 		storeOperand(ins.dst, 0);
 		return;
 	}
+
+	static const std::unordered_map<int, std::string> mapInsShift = {
+		{ Shl, "sal" }, { Shr, "sar" },
+		{ Shlu, "shl" }, { Shru, "shr"}, };
+	auto iterShift = mapInsShift.find(ins.oper);
+	if (iterShift != mapInsShift.end())
+	{
+		if (ins.src2.isConst())
+		{
+			std::string tmpReg = loadOperand(0, ins.src1);
+			writeCode(iterShift->second, " ", tmpReg, ", ", getConst(ins.src2));
+			storeOperand(ins.dst, 0);
+		}
+		else
+		{
+			std::string tmpReg = loadOperand(0, ins.src1);
+			loadOperand(1, ins.src2);
+			writeCode(iterShift->second, " ", tmpReg, ", cl");
+			storeOperand(ins.dst, 0);
+		}
+		return;
+	}
+
 	if (ins.oper == Div || ins.oper == Mod)
 	{
 		std::string src1 = loadOperand(0, ins.src1);
@@ -629,6 +602,12 @@ void CodeGeneratorBasic::translateIns(Instruction ins)
 		writeCode("mov rsp, rbp");
 		writeCode("pop rbp");
 		writeCode("ret");
+		return;
+	}
+	if (ins.oper == Br)
+	{
+		std::string tempReg = loadOperand(0, ins.src1);	//FIXME: src1 may be imm
+		writeCode("test ", tempReg, ", ", tempReg);
 		return;
 	}
 

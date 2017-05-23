@@ -67,6 +67,7 @@ protected:
 	std::list<MxIR::Instruction> lastIns;
 	std::shared_ptr<MxIR::Block> lastBlockIn, lastBlockOut;
 	std::shared_ptr<MxIR::Block> loopContinue, loopBreak;
+	std::shared_ptr<MxIR::Block> returnBlock;
 	std::stack<std::pair<MxIR::Operand, MxType>> stkXValues;
 
 	MxIR::Operand lastOperand, lastWriteAddr;	//when Write flag is set and lastWriteAddr.type == empty, we can write to lastOperand directly

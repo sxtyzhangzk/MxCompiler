@@ -82,6 +82,7 @@ class CompileFlags
 {
 public:
 	bool disable_access_protect;
+	bool optim_register_allocation;
 
 	static CompileFlags * getInstance()
 	{
@@ -130,5 +131,7 @@ void prints(std::ostream &out, Tnow &&now, T&&... val)
 	out << std::forward<Tnow>(now);
 	prints(out, std::forward<T>(val)...);
 }
+
+
 
 #endif

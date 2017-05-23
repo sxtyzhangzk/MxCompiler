@@ -9,7 +9,8 @@ std::tuple<int, std::string, std::string> ParseOptions(int argc, char *argv[])
 		("help,h", "Display this information")
 		("input", value<std::vector<std::string>>()->value_name("file"), "Input file")
 		("output,o", value<std::string>()->value_name("file"), "Place the output into <file>")
-		("fdisable-access-protect", "Set the flag of disable access protect");
+		("fdisable-access-protect", "Set the flag of disable access protect")
+		("optim-reg-alloc", "Optimize the register allocation");
 
 	positional_options_description po;
 	po.add("input", 1);
@@ -35,6 +36,8 @@ std::tuple<int, std::string, std::string> ParseOptions(int argc, char *argv[])
 	}
 	if (vm.count("fdisable-access-protect"))
 		CompileFlags::getInstance()->disable_access_protect = true;
+	if (vm.count("optim-reg-alloc"))
+		CompileFlags::getInstance()->optim_register_allocation = true;
 	if (!vm.count("input"))
 	{
 		std::cerr << argv[0] << ": no input file" << std::endl;

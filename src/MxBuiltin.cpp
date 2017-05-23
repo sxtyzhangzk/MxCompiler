@@ -115,7 +115,7 @@ Function MxBuiltin::builtin_print()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(Reg8(1), Seq, RegPtr(0), ImmPtr(0)),
@@ -147,7 +147,7 @@ Function MxBuiltin::builtin_println()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(Reg8(1), Seq, RegPtr(0), ImmPtr(0)),
@@ -182,7 +182,7 @@ Function MxBuiltin::builtin_getString()
 	static const size_t blockSize = 1024;
 	std::shared_ptr<Block> block[11];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IRCall(RegPtr(0), IDExtSymbol(size_t(BuiltinSymbol::malloc)), {ImmPtr(objectHeader + stringHeader + blockSize)}),
@@ -271,8 +271,8 @@ Function MxBuiltin::builtin_getString()
 Function MxBuiltin::builtin_getInt()
 {
 	Function ret;
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.inBlock->ins = {
 		IR(RegPtr(0), Allocate, ImmPtr(4), ImmPtr(4)),
 		IRCall(EmptyOperand(), IDExtSymbol(size_t(BuiltinSymbol::scanf)), {IDConst(size_t(BuiltinConst::Percent_d)), RegPtr(0)}),
@@ -287,8 +287,8 @@ Function MxBuiltin::builtin_toString()
 {
 	Function ret;
 	ret.params.push_back(Reg32(0));
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.inBlock->ins = {
 		IRCall(RegPtr(1), IDFunc(size_t(BuiltinFunc::newobject)), {ImmPtr(stringHeader+12), ImmPtr(0)}),	//TODO: change type id
 		IR(RegPtr(2), Add, RegPtr(1), ImmPtr(stringHeader)),
@@ -305,7 +305,7 @@ Function MxBuiltin::builtin_length()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(Reg8(1), Seq, RegPtr(0), ImmPtr(0)),	//string == null
@@ -336,7 +336,7 @@ Function MxBuiltin::builtin_substring()
 {
 	std::shared_ptr<Block> block[10];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	//%0: pointer of the string
 	//%1: left bound of substring, %2: right bound of substring
@@ -361,48 +361,48 @@ Function MxBuiltin::builtin_substring()
 	block[2]->brFalse = block[3];
 
 	block[3]->ins = {
-		IR(RegPtr(1), Sext, Reg32(1)),
-		IR(RegPtr(2), Sext, Reg32(2)),
-		IR(Reg8(5), Slt, RegPtr(1), ImmPtr(0)),	//if left < 0 => left = 0
+		IR(RegPtr(14), Sext, Reg32(1)),
+		IR(RegPtr(15), Sext, Reg32(2)),
+		IR(Reg8(5), Slt, RegPtr(14), ImmPtr(0)),	//if left < 0 => left = 0
 		IRBranch(Reg8(5), unlikely),
 	};
 	block[3]->brTrue = block[4];
 	block[3]->brFalse = block[5];
 
 	block[4]->ins = {
-		IR(RegPtr(1), Move, ImmPtr(0)),
+		IR(RegPtr(14), Move, ImmPtr(0)),
 		IRJump(),
 	};
 	block[4]->brTrue = block[5];
 
 	block[5]->ins = {
 		IR(RegPtr(6), Load, RegPtr(0)),	//%6: length of string
-		IR(Reg8(7), Sge, RegPtr(2), RegPtr(6)),	//if right >= length => right = length-1
+		IR(Reg8(7), Sge, RegPtr(15), RegPtr(6)),	//if right >= length => right = length-1
 		IRBranch(Reg8(7), unlikely),
 	};
 	block[5]->brTrue = block[6];
 	block[5]->brFalse = block[7];
 
 	block[6]->ins = {
-		IR(RegPtr(2), Sub, RegPtr(6), ImmPtr(1)),
+		IR(RegPtr(15), Sub, RegPtr(6), ImmPtr(1)),
 		IRJump(),
 	};
 	block[6]->brTrue = block[7];
 
 	block[7]->ins = {
-		IR(Reg8(8), Sgt, RegPtr(1), RegPtr(2)),	//if left > right => return ""
+		IR(Reg8(8), Sgt, RegPtr(14), RegPtr(15)),	//if left > right => return ""
 		IRBranch(Reg8(8), unlikely),
 	};
 	block[7]->brTrue = block[1];
 	block[7]->brFalse = block[8];
 
 	block[8]->ins = {
-		IR(RegPtr(9), Sub, RegPtr(2), RegPtr(1)),	//%9: length of string (= right - left + 1)
+		IR(RegPtr(9), Sub, RegPtr(15), RegPtr(14)),	//%9: length of string (= right - left + 1)
 		IR(RegPtr(9), Add, RegPtr(9), ImmPtr(1)),	
 		IR(RegPtr(10), Add, RegPtr(9), ImmPtr(stringHeader + 1)),	//%10: size of string (=length + stringheader + 1 ('\0'))
 		IRCall(RegPtr(11), IDFunc(size_t(BuiltinFunc::newobject)), {RegPtr(10), ImmPtr(0)}),	//TODO: Type ID	
 		IR(RegPtr(12), Add, RegPtr(0), ImmPtr(stringHeader)),
-		IR(RegPtr(12), Add, RegPtr(12), RegPtr(1)),				//%12: start ptr of src
+		IR(RegPtr(12), Add, RegPtr(12), RegPtr(14)),				//%12: start ptr of src
 		IR(RegPtr(13), Add, RegPtr(11), ImmPtr(stringHeader)),	//%13: start ptr of dst
 		IRCall(EmptyOperand(), IDExtSymbol(size_t(BuiltinSymbol::memcpy)), {RegPtr(13), RegPtr(12), RegPtr(9)}),
 		IRStoreA(Imm8(0), RegPtr(13), RegPtr(9)),		//write '\0'
@@ -422,7 +422,7 @@ Function MxBuiltin::builtin_parseInt()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(Reg8(1), Seq, RegPtr(0), ImmPtr(0)),
@@ -456,7 +456,7 @@ Function MxBuiltin::builtin_ord_safe()
 {
 	std::shared_ptr<Block> block[6];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	//%0: pointer of the string
 	//%1: index of the target character
@@ -482,9 +482,9 @@ Function MxBuiltin::builtin_ord_safe()
 	block[2]->brFalse = block[3];
 
 	block[3]->ins = {
-		IR(RegPtr(1), Zext, Reg32(1)),
+		IR(RegPtr(8), Zext, Reg32(1)),
 		IR(RegPtr(4), Load, RegPtr(0)),			//%4: length of string
-		IR(Reg8(5), Sge, RegPtr(1), RegPtr(4)),	//if idx >= length => ERROR
+		IR(Reg8(5), Sge, RegPtr(8), RegPtr(4)),	//if idx >= length => ERROR
 		IRBranch(Reg8(5), unlikely),
 	};
 	block[3]->brTrue = block[1];
@@ -492,9 +492,9 @@ Function MxBuiltin::builtin_ord_safe()
 
 	block[4]->ins = {
 		IR(RegPtr(6), Add, RegPtr(0), ImmPtr(stringHeader)),
-		IR(Reg8(7), LoadA, RegPtr(6), RegPtr(1)),
-		IR(Reg32(7), Zext, Reg8(7)),
-		IRReturn(Reg32(7)),
+		IR(Reg8(7), LoadA, RegPtr(6), RegPtr(8)),
+		IR(Reg32(9), Zext, Reg8(7)),
+		IRReturn(Reg32(9)),
 	};
 	block[4]->brTrue = block[5];
 
@@ -508,8 +508,8 @@ Function MxBuiltin::builtin_ord_safe()
 Function MxBuiltin::builtin_ord_unsafe()
 {
 	Function ret;
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.params = { RegPtr(0), Reg32(1) };
 	ret.inBlock->ins = {
 		IR(RegPtr(2), Add, RegPtr(0), ImmPtr(stringHeader)),
@@ -526,7 +526,7 @@ Function MxBuiltin::builtin_size()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	//%0: pointer of the array
 
@@ -560,8 +560,8 @@ Function MxBuiltin::builtin_size_unsafe()
 {
 	Function ret;
 	ret.params = { RegPtr(0) };
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.inBlock->ins = {
 		IR(RegPtr(1), Load, RegPtr(0)),
 		IRReturn(Reg32(1)),
@@ -574,8 +574,8 @@ Function MxBuiltin::builtin_runtime_error()
 {
 	Function ret;
 	ret.params = { RegPtr(0) };
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.inBlock->ins = {
 		IR(RegPtr(1), Load, IDExtSymbol(size_t(BuiltinSymbol::Stderr))),
 		IRCall(EmptyOperand(), IDExtSymbol(size_t(BuiltinSymbol::fputs)), {IDConst(size_t(BuiltinConst::runtime_error)), RegPtr(1)}),
@@ -592,7 +592,7 @@ Function MxBuiltin::builtin_strcat()
 {
 	std::shared_ptr<Block> block[8];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	//%0: pointer of left string
 	//%1: pointer of right string
@@ -669,7 +669,7 @@ Function MxBuiltin::builtin_strcmp()
 {
 	std::shared_ptr<Block> block[8];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(Reg8(2), Seq, RegPtr(0), ImmPtr(0)),
@@ -728,7 +728,7 @@ Function MxBuiltin::builtin_subscript_safe(size_t size)
 
 	std::shared_ptr<Block> block[6];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(Reg8(2), Seq, RegPtr(0), ImmPtr(0)),
@@ -745,8 +745,8 @@ Function MxBuiltin::builtin_subscript_safe(size_t size)
 
 	block[2]->ins = {
 		IR(RegPtr(3), Load, RegPtr(0)),
-		IR(RegPtr(1), Sext, Reg32(1)),
-		IR(Reg8(4), Sgeu, RegPtr(1), RegPtr(3)),
+		IR(RegPtr(8), Sext, Reg32(1)),
+		IR(Reg8(4), Sgeu, RegPtr(8), RegPtr(3)),
 		IRBranch(Reg8(4), unlikely),
 	};
 	block[2]->brTrue = block[3];
@@ -760,7 +760,7 @@ Function MxBuiltin::builtin_subscript_safe(size_t size)
 
 	block[4]->ins = {
 		IR(RegPtr(5), Add, RegPtr(0), ImmPtr(arrayHeader)),
-		IR(RegPtr(6), Mult, RegPtr(1), ImmPtr(size)),
+		IR(RegPtr(6), Mult, RegPtr(8), ImmPtr(size)),
 		IR(RegPtr(7), Add, RegPtr(5), RegPtr(6)),
 		//IR(Reg(7), LoadA, RegPtr(5), RegPtr(6)),
 		IRReturn(RegPtr(7)),
@@ -778,8 +778,8 @@ Function MxBuiltin::builtin_subscript_unsafe(size_t size)
 {
 	Function ret;
 	ret.params = { RegPtr(0), Reg32(1) };
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.inBlock->ins = {
 		IR(RegPtr(2), Add, RegPtr(0), ImmPtr(arrayHeader)),
 		IR(RegPtr(3), Sext, Reg32(1)),
@@ -795,7 +795,7 @@ Function MxBuiltin::builtin_newobject()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IR(RegPtr(0), Add, RegPtr(0), ImmPtr(objectHeader)),		//actual size = object size + object header
@@ -833,7 +833,7 @@ MxIR::Function MxBuiltin::builtin_newobject_zero()
 {
 	std::shared_ptr<Block> block[4];
 	for (auto &blk : block)
-		blk.reset(new Block);
+		blk = Block::construct();
 
 	block[0]->ins = {
 		IRCall(RegPtr(2), IDFunc(size_t(BuiltinFunc::newobject)), {RegPtr(0), RegPtr(1)}),
@@ -864,8 +864,8 @@ MxIR::Function MxBuiltin::builtin_newobject_zero()
 MxIR::Function MxBuiltin::builtin_stub()
 {
 	Function ret;
-	ret.inBlock.reset(new Block);
-	ret.outBlock.reset(new Block);
+	ret.inBlock = Block::construct();
+	ret.outBlock = Block::construct();
 	ret.inBlock->ins = { IRReturn() };
 	ret.inBlock->brTrue = ret.outBlock;
 	return ret;
