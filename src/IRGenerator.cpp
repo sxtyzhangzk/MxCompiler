@@ -134,7 +134,7 @@ Function IRGenerator::generate(ASTDeclFunc *declFunc)
 	{
 		if (i == 0 && finfo.isThiscall)
 			continue;
-		ret.params.push_back(RegByType(i - 1, finfo.paramType[i]));
+		ret.params.push_back(RegByType(finfo.isThiscall ? i - 1 : i, finfo.paramType[i]));
 	}
 
 	ret.inBlock = Block::construct();
