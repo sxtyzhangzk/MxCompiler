@@ -62,8 +62,6 @@ namespace MxIR
 		spillRegister();
 		eliminateSpillCode();
 		insertAllocateCode();
-
-		//return;
 		
 		reconstructSSA();
 		relabelVReg();
@@ -447,7 +445,7 @@ namespace MxIR
 			if (iter->oper == ExternalVar)
 			{
 				assert(iter->dst.isReg() && needreg(iter->dst));
-				externalVarHint[varGroup[iter->dst.val]] = iter->src1;
+				externalVarHint[iter->dst.val] = iter->src1;
 				iter = func.inBlock->ins.erase(iter);
 			}
 			else
@@ -538,12 +536,10 @@ namespace MxIR
 		ssize_t curInsn = block->ins.size() - 1;
 		for (auto iter = block->ins.rbegin(); iter != block->ins.rend(); ++iter)
 		{
-			for (Operand *operand : iter->getInputReg())
+			for (Operand *operand : iter->getInputReg() | needreg)
 			{
-				if (operand->val == Operand::InvalidID)
-					continue;
-				if (varUse[operand->val].empty() || varUse[operand->val].top() != curInsn)
-					varUse[operand->val].push(curInsn);
+				//if (varUse[operand->val].empty() || varUse[operand->val].top() != curInsn)
+				varUse[operand->val].push(curInsn);
 			}
 			curInsn--;
 		}
@@ -585,7 +581,7 @@ namespace MxIR
 		curInsn = 0;
 		size_t remainRegister = phyReg.size();
 		std::vector<Operand> lastLock;
-		for (auto iter = block->ins.begin(); iter != block->ins.end(); ++iter)
+		for (auto iter = block->ins.begin(); iter != block->ins.end(); ++iter, curInsn++)
 		{
 			if (isSpill(*iter) || isReload(*iter))
 				continue;
@@ -660,6 +656,7 @@ namespace MxIR
 			limitReg(remainRegister, iter);
 			for (Operand *operand : iter->getInputReg() | needreg)
 			{
+				assert(varUse[operand->val].top() == curInsn);
 				varUse[operand->val].pop();
 			}
 			std::make_heap(W.begin(), W.end(), cmpVarUse);
@@ -826,12 +823,12 @@ namespace MxIR
 		{
 			if (isSpill(*iter))
 			{
-				if (spilled.count(iter->src1.val))
+				if (spilled.count(iter->dst.val))
 				{
 					iter = block->ins.erase(iter);
 					continue;
 				}
-				spilled.insert(iter->src1.val);
+				spilled.insert(iter->dst.val);
 			}
 			++iter;
 		}
@@ -839,7 +836,7 @@ namespace MxIR
 			eliminateSpillCode(child, spilled);
 		for (auto &ins : block->ins)
 			if(isSpill(ins))
-				spilled.erase(ins.src1.val);
+				spilled.erase(ins.dst.val);
 	}
 
 	void RegisterAllocatorSSA::insertAllocateCode()
@@ -853,8 +850,8 @@ namespace MxIR
 					if (allocated.count(varGroup[ins.dst.val]))
 						continue;
 					Instruction insn = IR(ins.src1, Allocate, ImmPtr(ins.dst.size()), ImmPtr(ins.dst.size()));
-					if (externalVarHint.count(varGroup[ins.dst.val]))
-						insn.paramExt.push_back(externalVarHint[varGroup[ins.dst.val]]);
+					if (externalVarHint.count(ins.dst.val))
+						insn.paramExt.push_back(externalVarHint[ins.dst.val]);
 					func.inBlock->ins.push_front(insn);
 					allocated.insert(varGroup[ins.dst.val]);
 				}

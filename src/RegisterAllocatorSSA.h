@@ -157,7 +157,7 @@ namespace MxIR
 
 		std::vector<Operand> varOp;
 		std::vector<size_t> varGroup;	//vregid -> groupid. note that groupid is also the store address of the register
-		std::map<size_t, Operand> externalVarHint;	//groupid -> alloc hint
+		std::map<size_t, Operand> externalVarHint;	//varid -> alloc hint
 		size_t nVar;
 
 		Function &func;
