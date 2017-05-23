@@ -425,6 +425,7 @@ Function MxBuiltin::builtin_parseInt()
 		blk = Block::construct();
 
 	block[0]->ins = {
+		IR(RegPtr(2), Allocate, ImmPtr(4), ImmPtr(4)),
 		IR(Reg8(1), Seq, RegPtr(0), ImmPtr(0)),
 		IRBranch(Reg8(1), unlikely),
 	};
@@ -437,7 +438,6 @@ Function MxBuiltin::builtin_parseInt()
 	block[1]->brTrue = block[3];
 
 	block[2]->ins = {
-		IR(RegPtr(2), Allocate, ImmPtr(4), ImmPtr(4)),
 		IR(RegPtr(3), Add, RegPtr(0), ImmPtr(stringHeader)),
 		IRCall(EmptyOperand(), IDExtSymbol(size_t(BuiltinSymbol::sscanf)), {RegPtr(3), IDConst(size_t(BuiltinConst::Percent_d)), RegPtr(2)}),
 		IR(Reg32(4), Load, RegPtr(2)),

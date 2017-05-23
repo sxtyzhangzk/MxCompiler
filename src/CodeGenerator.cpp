@@ -57,7 +57,11 @@ void CodeGenerator::generateFunc(MxProgram::funcInfo &finfo, const std::string &
 		popRBP = true;
 	}
 	else
+	{
+		for (auto &kv : stackFrame)
+			kv.second -= 8;
 		popRBP = false;
+	}
 	if (stackSize > 0)
 		writeCode("sub rsp, ", stackSize);
 
@@ -183,7 +187,7 @@ void CodeGenerator::setRegisterConstrains()
 			else if (iter->oper == Call)
 			{
 				size_t deltaRSP = 0;
-				if (regParam.size() > regParam.size() && (regParam.size() - regParam.size()) % 2 == 1)
+				if (iter->paramExt.size() > regParam.size() && (iter->paramExt.size() - regParam.size()) % 2 == 1)
 					block->ins.insert(iter, IR(EmptyOperand(), Placeholder, ImmPtr(0), ImmPtr(8))), deltaRSP += 8;	//placeholder(0, 8): sub rsp, 8
 				for (size_t i = regParam.size(); i < iter->paramExt.size(); i++)
 					block->ins.insert(iter, IR(EmptyOperand(), PushParam, iter->paramExt[i])), deltaRSP += 8;
@@ -323,8 +327,17 @@ void CodeGenerator::regularizeInsnPost()
 				}
 				else
 				{
-					block->ins.insert(iter, IR(iter->dst, Move, iter->src1));
-					iter->src1 = iter->dst;
+					if (!iter->src2.isReg() || iter->dst.pregid != iter->src2.pregid)
+					{
+						block->ins.insert(iter, IR(iter->dst, Move, iter->src1));
+						iter->src1 = iter->dst;
+					}
+					else
+					{
+						assert(iter->oper == Sub);
+						std::swap(iter->src1, iter->src2);
+						block->ins.insert(std::next(iter), IR(iter->dst, Neg, iter->dst));
+					}
 					++iter;
 				}
 			}
@@ -374,9 +387,9 @@ std::string CodeGenerator::getOperand(Operand operand)
 	{
 		std::stringstream ss;
 		if (stackFrame[operand.val] > 0)
-			ss << "rbp+" << stackFrame[operand.val];
+			ss << (popRBP ? "rbp+" : "rsp+") << stackFrame[operand.val];
 		else
-			ss << "rbp-" << -stackFrame[operand.val];
+			ss << (popRBP ? "rbp-" : "rsp-") << -stackFrame[operand.val];
 		return ss.str();
 	}
 	assert(false);
@@ -393,7 +406,7 @@ void CodeGenerator::translateIns(Instruction ins)
 			assert(ins.src2.isImm());
 			writeCode("sub rsp, ", ins.src2.val);
 		}
-		else if (ins.src2.val == 0)
+		else if (ins.src1.val == 1)
 		{
 			assert(ins.src2.isImm());
 			writeCode("add rsp, ", ins.src2.val);
@@ -508,7 +521,7 @@ void CodeGenerator::translateIns(Instruction ins)
 	if (ins.oper == PushParam)
 	{
 		if (ins.src1.isImm())
-			writeCode("push ", sizeName(ins.src1.size()), " ", getOperand(ins.src1));
+			writeCode("push qword ", getOperand(ins.src1));
 		else if (ins.src1.isReg())
 			writeCode("push ", regName(ins.src1.pregid, 8));
 		else
