@@ -290,9 +290,9 @@ void CodeGenerator::regularizeInsnPost()
 					{
 						assert(info.count(info[reg].from));
 						block->ins.insert(iter, IR(
-							info[reg].operand,
+							RegPtr(Operand::InvalidID).setPRegID(info[reg].operand.pregid),
 							Move,
-							RegSize(Operand::InvalidID, info[reg].operand.size()).setPRegID(info[reg].from)
+							RegPtr(Operand::InvalidID).setPRegID(info[reg].from)
 						));
 						if (--info[info[reg].from].nNext == 0)
 							Q.push(info[reg].from);
@@ -306,7 +306,9 @@ void CodeGenerator::regularizeInsnPost()
 					do
 					{
 						assert(info.count(now));
-						block->ins.insert(iter, IR(EmptyOperand(), Xchg, info[now].operand, info[now].operand.clone().setPRegID(info[now].from)));
+						block->ins.insert(iter, IR(EmptyOperand(), Xchg, 
+							RegPtr(Operand::InvalidID).setPRegID(info[now].operand.pregid), 
+							RegPtr(Operand::InvalidID).setPRegID(info[now].from)));
 						int tmp = now;
 						now = info[now].from;
 						info.erase(tmp);
