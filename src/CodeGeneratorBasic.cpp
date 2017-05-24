@@ -265,7 +265,7 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 		mapBlocks.insert({ vBlocks[i], i });
 	for (size_t idx = 0; idx < vBlocks.size(); idx++)
 	{
-		writeLabel("L", cntLocalLabel + idx);
+		writeLabel(".L", cntLocalLabel + idx);
 		Block *block = vBlocks[idx];
 		for (auto i = block->ins.begin(); i != block->ins.end(); ++i)
 		{
@@ -274,7 +274,7 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 				assert(i == --block->ins.end());
 				size_t nextIdx = mapBlocks.find(block->brTrue.get())->second;
 				if (nextIdx != idx + 1)
-					writeCode("jmp L", cntLocalLabel + nextIdx);
+					writeCode("jmp .L", cntLocalLabel + nextIdx);
 				break;
 			}
 			if (i->oper == Br)
@@ -284,13 +284,13 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 				size_t falseIdx = mapBlocks.find(block->brFalse.get())->second;
 				translateIns(*i);
 				if (trueIdx == idx + 1)
-					writeCode("jz L", cntLocalLabel + falseIdx);
+					writeCode("jz .L", cntLocalLabel + falseIdx);
 				else if (falseIdx == idx + 1)
-					writeCode("jnz L", cntLocalLabel + trueIdx);
+					writeCode("jnz .L", cntLocalLabel + trueIdx);
 				else
 				{
-					writeCode("jz L", cntLocalLabel + falseIdx);
-					writeCode("jmp L", cntLocalLabel + trueIdx);
+					writeCode("jz .L", cntLocalLabel + falseIdx);
+					writeCode("jmp .L", cntLocalLabel + trueIdx);
 				}
 				break;
 			}

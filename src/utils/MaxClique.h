@@ -14,6 +14,10 @@ public:
 	}
 	const std::vector<size_t> & findMaxClique()
 	{
+		R.clear();
+		X.clear();
+		P.resize(V.size());
+		std::iota(P.begin(), P.end(), 0);
 		BronKerbosch();
 		return R;
 	}

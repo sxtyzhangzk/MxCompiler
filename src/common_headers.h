@@ -16,6 +16,7 @@
 
 #include <memory>
 
+#include <numeric>
 #include <algorithm>
 #include <utility>
 #include <cstdint>
