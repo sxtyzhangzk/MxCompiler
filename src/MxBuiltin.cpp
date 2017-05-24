@@ -693,7 +693,7 @@ Function MxBuiltin::builtin_strcmp()
 	block[3]->ins = {		//str1 == null && str2 != null
 		IRReturn(Imm32(-1)),
 	};
-	block[2]->brTrue = block[7];
+	block[3]->brTrue = block[7];
 
 	block[4]->ins = {
 		IR(Reg8(4), Seq, RegPtr(1), ImmPtr(0)),
