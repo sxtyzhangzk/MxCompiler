@@ -1,4 +1,5 @@
 set -e
+cat /proc/cpuinfo | grep "model name"
 rm -rf build
 mkdir -p build
 cd build
