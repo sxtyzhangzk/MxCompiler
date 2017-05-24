@@ -313,6 +313,21 @@ namespace MxIR
 				else
 					++iter;
 			}
+
+			/*std::stringstream ss;
+			ss << "nextUseBegin: ";
+			for (auto &kv : bp.nextUseBegin)
+			{
+				ss << kv.first << ":" << kv.second << " ";
+			}
+			ss << std::endl; 
+			ss << "nextUseEnd: ";
+			for (auto &kv : bp.nextUseEnd)
+			{
+				ss << kv.first << ":" << kv.second << " ";
+			}
+			ss << std::endl;
+			block->dbgInfo = ss.str();*/
 			return true;
 		});
 	}
@@ -416,12 +431,14 @@ namespace MxIR
 					assert(src.first.size() == phi.dst.size());
 					assert(src.first.size() == varOp[src.first.val].size());
 					ufs.merge(phi.dst.val, src.first.val);
+					//std::cerr << "MERGE " << phi.dst.val << " " << src.first.val;
 				}
 			}
 			return true;
 		});
 
 		std::map<size_t, size_t> groupID;
+		std::map<size_t, std::set<size_t>> member;
 		for (size_t i = 0; i < nVar; i++)
 		{
 			size_t root = ufs.findRoot(i);
@@ -435,7 +452,15 @@ namespace MxIR
 			else
 				gid = groupID[root];
 			varGroup.push_back(gid);
+			member[gid].insert(i);
 		}
+		/*for (auto &kv : member)
+		{
+			std::cerr << "Member of group " << kv.first << ": ";
+			for (size_t mem : kv.second)
+				std::cerr << mem << " ";
+			std::cerr << std::endl;
+		}*/
 	}
 
 	void RegisterAllocatorSSA::computeExternalVar()
@@ -930,7 +955,7 @@ namespace MxIR
 			}
 		}
 
-		/*func.inBlock->traverse([this](Block *block) -> bool
+		func.inBlock->traverse([this](Block *block) -> bool
 		{
 			std::stringstream ss;
 			ss << "Live In: ";
@@ -943,7 +968,7 @@ namespace MxIR
 			ss << std::endl;
 			block->dbgInfo = ss.str();
 			return true;
-		});*/
+		});
 
 		/*if (!property[func.inBlock.get()].liveIn.empty())
 			std::cerr << "Non-empty live in!" << std::endl;*/

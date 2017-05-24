@@ -21,10 +21,12 @@ public:
 	}
 	size_t merge(size_t u, size_t v)
 	{
+		u = findRoot(u), v = findRoot(v);
+		if (u == v)
+			return u;
 		if (vNodes.at(u).size < vNodes.at(v).size)
 			return merge(v, u);
-		if (findRoot(u) == findRoot(v))
-			return findRoot(u);
+		
 		vNodes[v].father = vNodes[u].father;
 		size_t root = findRoot(v);
 		vNodes[root].size += vNodes[v].size;
