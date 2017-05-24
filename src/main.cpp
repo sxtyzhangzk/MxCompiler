@@ -12,6 +12,7 @@
 #include "option_parser.h"
 #include "SSAConstructor.h"
 #include "CodeGenerator.h"
+#include "InlineOptimizer.h"
 using namespace std;
 
 int compile(const std::string &fileName, const std::string &output)
@@ -58,6 +59,12 @@ int compile(const std::string &fileName, const std::string &output)
 
 		if (ic.cntError > 0)
 			return 2;
+
+		if (CompileFlags::getInstance()->optim_inline)
+		{
+			MxIR::InlineOptimizer optim;
+			optim.work();
+		}
 
 		if (CompileFlags::getInstance()->optim_register_allocation)
 		{

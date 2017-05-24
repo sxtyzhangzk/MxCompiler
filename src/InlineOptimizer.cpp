@@ -14,7 +14,7 @@ namespace MxIR
 
 	void InlineOptimizer::work()
 	{
-		static const size_t maxPenalty = 1000;
+		const size_t maxPenalty = CompileFlags::getInstance()->inline_param;
 		struct Tqueue
 		{
 			size_t idx, nUpdate, penalty;

@@ -81,8 +81,10 @@ struct MxType
 class CompileFlags
 {
 public:
-	bool disable_access_protect;
-	bool optim_register_allocation;
+	bool disable_access_protect = false;
+	bool optim_register_allocation = false;
+	bool optim_inline = false;
+	int inline_param = 1000;
 
 	static CompileFlags * getInstance()
 	{

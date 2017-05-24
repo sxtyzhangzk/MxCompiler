@@ -10,7 +10,9 @@ std::tuple<int, std::string, std::string> ParseOptions(int argc, char *argv[])
 		("input", value<std::vector<std::string>>()->value_name("file"), "Input file")
 		("output,o", value<std::string>()->value_name("file"), "Place the output into <file>")
 		("fdisable-access-protect", "Set the flag of disable access protect")
-		("optim-reg-alloc", "Optimize the register allocation");
+		("optim-reg-alloc", "Optimize the register allocation")
+		("optim-inline", "enable inline expansion")
+		("inline-param", value<int>()->value_name("param"), "the parameter for inline optimizer");
 
 	positional_options_description po;
 	po.add("input", 1);
@@ -38,6 +40,10 @@ std::tuple<int, std::string, std::string> ParseOptions(int argc, char *argv[])
 		CompileFlags::getInstance()->disable_access_protect = true;
 	if (vm.count("optim-reg-alloc"))
 		CompileFlags::getInstance()->optim_register_allocation = true;
+	if (vm.count("optim-inline"))
+		CompileFlags::getInstance()->optim_inline = true;
+	if (vm.count("inline-param"))
+		CompileFlags::getInstance()->inline_param = vm["inline-param"].as<int>();
 	if (!vm.count("input"))
 	{
 		std::cerr << argv[0] << ": no input file" << std::endl;
