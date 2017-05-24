@@ -955,7 +955,7 @@ namespace MxIR
 			}
 		}
 
-		func.inBlock->traverse([this](Block *block) -> bool
+		/*func.inBlock->traverse([this](Block *block) -> bool
 		{
 			std::stringstream ss;
 			ss << "Live In: ";
@@ -968,7 +968,7 @@ namespace MxIR
 			ss << std::endl;
 			block->dbgInfo = ss.str();
 			return true;
-		});
+		});*/
 
 		/*if (!property[func.inBlock.get()].liveIn.empty())
 			std::cerr << "Non-empty live in!" << std::endl;*/
