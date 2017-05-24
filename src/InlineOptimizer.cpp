@@ -15,6 +15,7 @@ namespace MxIR
 	void InlineOptimizer::work()
 	{
 		const size_t maxPenalty = CompileFlags::getInstance()->inline_param;
+		const int threshold = CompileFlags::getInstance()->inline_param2;
 		struct Tqueue
 		{
 			size_t idx, nUpdate, penalty;
@@ -39,21 +40,33 @@ namespace MxIR
 			Function content = program->vFuncs[cur.idx].content.clone();
 			if (stats[cur.idx].callTo.count(cur.idx))
 			{
+				size_t incBlock = (stats[cur.idx].nBlock - 1) * stats[cur.idx].callTo[cur.idx];
+				if (incBlock > threshold + stats[cur.idx].nBlock * sqrt(threshold))
+					continue;
+
 				applyInline(cur.idx, cur.idx, content);
 				stats[cur.idx].nUpdate++;
 				Q.push(Tqueue{ cur.idx, stats[cur.idx].nUpdate, stats[cur.idx].penalty() });
 			}
 			else
 			{
+				bool flag = true;
 				for (size_t i = 0; i < stats.size(); i++)
 					if (stats[i].callTo.count(cur.idx))
 					{
+						size_t incBlock = (stats[cur.idx].nBlock - 1) * stats[i].callTo[cur.idx];
+						if (incBlock > threshold + stats[i].nBlock * sqrt(threshold))
+						{
+							flag = false;
+							continue;
+						}
+
 						applyInline(cur.idx, i, content);
 						assert(!stats[i].callTo.count(cur.idx));
 						stats[i].nUpdate++;
 						Q.push(Tqueue{ i, stats[i].nUpdate, stats[i].penalty() });
 					}
-				if(!(program->vFuncs[cur.idx].attribute & Export))
+				if(flag && !(program->vFuncs[cur.idx].attribute & Export))
 					program->vFuncs[cur.idx].disabled = true;
 			}
 		}
@@ -110,6 +123,7 @@ namespace MxIR
 			vBlocks.push_back(block);
 			return true;
 		});
+		auto callTo = stats[callee].callTo;
 
 		for(Block *block : vBlocks)
 		{
@@ -127,9 +141,10 @@ namespace MxIR
 					stats[caller].nInsn += stats[callee].nInsn + child.params.size();
 					if (stats[callee].nBlock > 2)
 						stats[caller].nBlock += stats[callee].nBlock - 1;
-					stats[caller].callTo[callee]--;
-					for (auto &kv : stats[callee].callTo)
+					for (auto &kv : callTo)
 						stats[caller].callTo[kv.first] += kv.second;
+					stats[caller].callTo[callee]--;
+					
 
 					child.inBlock->traverse([offsetVarID, &retVar, &child](Block *block) -> bool
 					{
