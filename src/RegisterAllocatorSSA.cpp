@@ -605,7 +605,8 @@ namespace MxIR
 
 		curInsn = 0;
 		size_t remainRegister = phyReg.size();
-		std::vector<Operand> lastLock;
+		std::map<int, Operand> lastLock;
+		std::map<int, size_t> manuallyAllocVar;	//preg id -> var id,  vars that manually assigned to locked register
 		for (auto iter = block->ins.begin(); iter != block->ins.end(); ++iter, curInsn++)
 		{
 			if (isSpill(*iter) || isReload(*iter))
@@ -614,13 +615,22 @@ namespace MxIR
 			{
 				assert(remainRegister == phyReg.size());
 				remainRegister -= iter->paramExt.size();
-				lastLock = iter->paramExt;
+				for (Operand &op : iter->paramExt)
+					lastLock[op.pregid] = op;
 				continue;
 			}
 			if (iter->oper == UnlockReg)
 			{
 				remainRegister = phyReg.size();
-				iter->paramExt = std::move(lastLock);
+				for (auto &kv : manuallyAllocVar)
+				{
+					W.push_back(kv.second);
+					std::push_heap(W.begin(), W.end(), cmpVarUse);
+				}
+				for (auto &kv : lastLock)
+					iter->paramExt.push_back(kv.second);
+				manuallyAllocVar.clear();
+				lastLock.clear();
 				continue;
 			}
 			assert(iter->oper != ExternalVar);
@@ -644,9 +654,7 @@ namespace MxIR
 						std::push_heap(W.begin(), W.end(), cmpVarUse);
 					}
 					dst.push_back(*operand);
-					Operand tmp = *operand;
-					tmp.pregid = -1;
-					src.push_back(*operand);
+					src.push_back(operand->clone().setPRegID(-1));
 				}
 				limitReg(remainRegister - cntPlaceholder, iter);
 				for (Operand *operand : input | needreg)
@@ -689,7 +697,10 @@ namespace MxIR
 			std::vector<size_t> outRegValid;
 			for (Operand *operand : iter->getOutputReg() | hasreg)
 			{
-				outRegValid.push_back(operand->val);
+				if (operand->pregid != -1 && lastLock.count(operand->pregid))
+					manuallyAllocVar[operand->pregid] = operand->val;
+				else
+					outRegValid.push_back(operand->val);
 			}
 			limitReg(remainRegister - outRegValid.size(), iter);
 			for (size_t vreg : outRegValid)
@@ -978,6 +989,9 @@ namespace MxIR
 	void RegisterAllocatorSSA::buildInterferenceGraph()
 	{
 		ifGraph.resize(nVar);
+		for (size_t i = 0; i < ifGraph.size(); i++)
+			ifGraph[i].root = i;
+
 		func.inBlock->traverse([this](Block *block) -> bool
 		{
 			BlockProperty &bp = property[block];
@@ -1160,7 +1174,7 @@ namespace MxIR
 		if (operand.pregid != -1)
 			return operand.pregid;
 		assert(operand.val != Operand::InvalidID);
-		return ifGraph[operand.val].preg;
+		return ifGraph[findVertexRoot(operand.val)].preg;
 	}
 
 	void RegisterAllocatorSSA::coalesce()
@@ -1230,10 +1244,15 @@ namespace MxIR
 						{
 							if (getPReg(*opOut) == getPReg(*opIn))
 							{
-								if(opOut->val != Operand::InvalidID)
-									ifGraph[opOut->val].pinned = true;
-								if (opIn->val != Operand::InvalidID)
-									ifGraph[opIn->val].pinned = true;
+								if (needreg(*opOut) && needreg(*opIn))
+									mergeVertices({ opOut->val, opIn->val });
+								else
+								{
+									if (opOut->val != Operand::InvalidID)
+										ifGraph[opOut->val].pinned = true;
+									if (opIn->val != Operand::InvalidID)
+										ifGraph[opIn->val].pinned = true;
+								}
 								flag = true;
 								break;
 							}
@@ -1251,14 +1270,20 @@ namespace MxIR
 					for (size_t i = 0; i < output.size(); i++)
 					{
 						Operand out = *output[i], in = *input[i];
-						assert(hasreg(out) && hasreg(in));
+						if (!hasreg(out) || !hasreg(in))
+							continue;
 						clearOptim();
 						if (getPReg(out) == getPReg(in))
 						{
-							if (needreg(out))
-								ifGraph[out.val].pinned = true;
-							if (needreg(in))
-								ifGraph[in.val].pinned = true;
+							if (needreg(out) && needreg(in))
+								mergeVertices({ out.val, in.val });
+							else
+							{
+								if (needreg(out))
+									ifGraph[out.val].pinned = true;
+								if (needreg(in))
+									ifGraph[in.val].pinned = true;
+							}
 							continue;
 						}
 						addOptim(out, in);
@@ -1323,9 +1348,17 @@ namespace MxIR
 			assert(!allocator.ifGraph[kv.first].forbiddenReg || !allocator.ifGraph[kv.first].forbiddenReg->count(kv.second));
 			assert(!allocator.ifGraph[kv.first].pinned);
 			allocator.ifGraph[kv.first].preg = kv.second;
-			allocator.ifGraph[kv.first].pinned = true;
+			//allocator.ifGraph[kv.first].pinned = true;
 		}
+		apply();
 		return 1;
+	}
+
+	void RegisterAllocatorSSA::OptimUnit::apply()
+	{
+		allocator.mergeVertices(S);
+		/*for (size_t var : cand)
+			allocator.ifGraph[var].pinned = true;*/
 	}
 	//What this function actually do:
 	// In a induced subgraph of G: G'(V', E') satisfying for each v in V': color(v) in { old_color(src), new_color(src) } 
@@ -1397,10 +1430,11 @@ namespace MxIR
 
 	RegisterAllocatorSSA::OptimUnitAll::OptimUnitAll(RegisterAllocatorSSA &allocator, size_t key, const std::vector<size_t> &another) : OptimUnit(allocator, 2, -1)
 	{
-		keyVertex = key;
+		keyVertex = allocator.findVertexRoot(key);
 		vertices.insert(keyVertex);
 		for (size_t var : another)
 		{
+			var = allocator.findVertexRoot(var);
 			if (var == keyVertex)
 				continue;
 			if (!allocator.ifGraph[keyVertex].neighbor.count(var) && !allocator.ifGraph[var].neighbor.count(keyVertex))
@@ -1462,10 +1496,10 @@ namespace MxIR
 
 	RegisterAllocatorSSA::OptimUnitOne::OptimUnitOne(RegisterAllocatorSSA &allocator, size_t u, size_t v) : OptimUnit(allocator, 2, -1)
 	{
-		keyVertex = u;
-		another = v;
-		if (u != v && !allocator.ifGraph[u].neighbor.count(v) && !allocator.ifGraph[v].neighbor.count(u))
-			S.insert({ u, v });
+		keyVertex = allocator.findVertexRoot(u);
+		another = allocator.findVertexRoot(v);
+		if (keyVertex != another && !allocator.ifGraph[keyVertex].neighbor.count(another) && !allocator.ifGraph[another].neighbor.count(keyVertex))
+			S.insert({ keyVertex, another });
 	}
 
 	void RegisterAllocatorSSA::destructSSA()
@@ -1499,9 +1533,69 @@ namespace MxIR
 			for (auto &ins : block->instructions())
 				for (Operand *operand : join<Operand *>(ins.getInputReg() | needreg, ins.getOutputReg() | needreg))
 				{
-					operand->pregid = ifGraph[operand->val].preg;
+					operand->pregid = ifGraph[findVertexRoot(operand->val)].preg;
 				}
 			return true;
 		});
+	}
+
+	size_t RegisterAllocatorSSA::findVertexRoot(size_t vtx)
+	{
+		if (ifGraph[vtx].root == vtx)
+			return vtx;
+		return ifGraph[vtx].root = findVertexRoot(ifGraph[vtx].root);
+	}
+
+	void RegisterAllocatorSSA::mergeVertices(const std::set<size_t> &vtxList)
+	{
+		std::set<size_t> vertices;
+		for (size_t vtx : vtxList)
+			vertices.insert(findVertexRoot(vtx));
+
+		if (vertices.size() <= 1)
+			return;
+		size_t maxNeighbor = 0;
+		size_t root = *vertices.begin();
+		std::shared_ptr<std::set<int>> forbiddenReg;
+		bool flag = false;
+		for (size_t vtx : vertices)
+		{
+			if (ifGraph[vtx].neighbor.size() > maxNeighbor)
+			{
+				maxNeighbor = ifGraph[vtx].neighbor.size();
+				root = vtx;
+			}
+			if (ifGraph[vtx].forbiddenReg && ifGraph[vtx].forbiddenReg != forbiddenReg)
+			{
+				if (!forbiddenReg)
+					forbiddenReg = ifGraph[vtx].forbiddenReg;
+				else
+				{
+					if (!flag)
+					{
+						forbiddenReg.reset(new std::set<int>(*forbiddenReg));
+						flag = true;
+					}
+					for (int reg : *ifGraph[vtx].forbiddenReg)
+						forbiddenReg->insert(reg);
+				}
+			}
+		}
+		for (size_t vtx : vertices)
+		{
+			if (vtx == root)
+				continue;
+			assert(ifGraph[vtx].preg == ifGraph[root].preg);
+			for (size_t neighbor : ifGraph[vtx].neighbor)
+			{
+				ifGraph[root].neighbor.insert(neighbor);
+				ifGraph[neighbor].neighbor.erase(vtx);
+				ifGraph[neighbor].neighbor.insert(root);
+			}
+			ifGraph[vtx].neighbor.clear();
+			ifGraph[vtx].forbiddenReg.reset();
+			ifGraph[vtx].root = root;
+		}
+		ifGraph[root].forbiddenReg = forbiddenReg;
 	}
 }

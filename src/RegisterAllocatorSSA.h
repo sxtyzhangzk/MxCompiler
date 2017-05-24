@@ -53,6 +53,9 @@ namespace MxIR
 		void destructSSA();
 		void writeRegInfo();
 
+		size_t findVertexRoot(size_t vtx);
+		void mergeVertices(const std::set<size_t> &vtxList);
+
 	protected:
 		struct BlockProperty
 		{
@@ -92,6 +95,7 @@ namespace MxIR
 			std::shared_ptr<std::set<int>> forbiddenReg;
 			int preg;
 			bool pinned;
+			size_t root;
 
 			GraphVertex() : preg(-1), pinned(false) {}
 		};
@@ -111,6 +115,7 @@ namespace MxIR
 
 			virtual void fail(size_t u) = 0;				//u != keyVertex
 			virtual void conflict(size_t u, size_t v) = 0;	//u, v != keyVertex
+			virtual void apply();
 
 			bool operator<(const OptimUnit &rhs) const { return S.size() + bias < rhs.S.size() + rhs.bias; }
 			int work();	//>0 for success; =0 for retry; <0 for abandoned
@@ -144,8 +149,13 @@ namespace MxIR
 			OptimUnitSingle(RegisterAllocatorSSA &allocator, size_t key, int target) : OptimUnit(allocator, 1, 0)
 			{
 				targetRegister = target;
-				keyVertex = key;
+				keyVertex = allocator.findVertexRoot(key);
 				S.insert(keyVertex);
+			}
+			virtual void apply() override
+			{
+				assert(S.size() == 1);
+				allocator.ifGraph[*S.begin()].pinned = true;
 			}
 			virtual void fail(size_t u) override { S.clear(); }
 			virtual void conflict(size_t u, size_t v) override { S.clear(); }
