@@ -110,4 +110,31 @@ namespace MxIR
 		//std::cerr << "cut: " << *iterPred << " -> " << this << std::endl;
 		preds.erase(iterPred);
 	}
+
+	Function Function::clone()
+	{
+		std::map<Block *, std::shared_ptr<Block>> mapNewBlock;	// old block -> new block
+		inBlock->traverse([&mapNewBlock](Block *block) -> bool
+		{
+			std::shared_ptr<Block> newBlock = Block::construct();
+			newBlock->phi = block->phi;
+			newBlock->ins = block->ins;
+			newBlock->sigma = block->sigma;
+			mapNewBlock[block] = std::move(newBlock);
+			return true;
+		});
+		inBlock->traverse([&mapNewBlock](Block *block) -> bool
+		{
+			if (block->brTrue)
+				mapNewBlock[block]->brTrue = mapNewBlock[block->brTrue.get()];
+			if (block->brFalse)
+				mapNewBlock[block]->brFalse = mapNewBlock[block->brFalse.get()];
+			return true;
+		});
+		Function ret;
+		ret.params = params;
+		ret.inBlock = mapNewBlock[inBlock.get()];
+		ret.outBlock = mapNewBlock[outBlock.get()];
+		return ret;
+	}
 }

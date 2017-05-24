@@ -11,7 +11,8 @@ enum FuncAttribute : std::uint32_t
 	Linear = 4,			//No cycle
 	Builtin = 8,
 	ForceInline = 16,
-	Export = 32,		//use 'global' to export in NASM; export name is the same as funcName; multiple export function with the same name is not allowed
+	NoInline = 32,
+	Export = 64,		//use 'global' to export in NASM; export name is the same as funcName; multiple export function with the same name is not allowed
 };
 
 class MxProgram
@@ -27,6 +28,7 @@ public:
 		std::set<size_t> dependency;		//builtin function not included
 
 		MxIR::Function content;
+		bool disabled = false;
 	};
 	struct varInfo
 	{

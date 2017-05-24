@@ -331,9 +331,9 @@ namespace MxIR
 			operator bool() const { return bool(ptr); }
 
 		protected:
-			Block * const curBlock;
 			std::shared_ptr<Block> ptr;
 			std::list<Block *>::iterator iterPred;
+			Block * const curBlock;
 		};
 
 	public:
@@ -371,6 +371,8 @@ namespace MxIR
 	public:
 		std::vector<Operand> params;
 		std::shared_ptr<Block> inBlock, outBlock;
+
+		Function clone();
 	};
 }
 

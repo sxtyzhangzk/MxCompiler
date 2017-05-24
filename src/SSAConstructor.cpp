@@ -98,6 +98,8 @@ namespace MxIR
 	void SSAConstructor::preprocess()
 	{
 		maxVarID = 0;
+		for (auto &param : func.params)
+			maxVarID = std::max(maxVarID, param.val);
 		func.inBlock->traverse([this](Block *block) -> bool
 		{
 			size_t myID = blocks.size();

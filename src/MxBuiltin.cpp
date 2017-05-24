@@ -60,19 +60,19 @@ void MxBuiltin::fillBuiltinMemberTable()
 		MxProgram::funcInfo{size_t(BuiltinSymbol::parseInt),	MxType{MxType::Integer},	{MxType{MxType::String}}, NoSideEffect | ConstExpr | Builtin, true, {}, builtin_parseInt() },
 		MxProgram::funcInfo{size_t(BuiltinSymbol::ord),			MxType{MxType::Integer},	{MxType{MxType::String}, MxType{MxType::Integer}}, NoSideEffect | ConstExpr | Builtin, true, {}, safe ? builtin_ord_safe() : builtin_ord_unsafe() },
 		MxProgram::funcInfo{size_t(BuiltinSymbol::size),		MxType{MxType::Integer},	{MxType{MxType::Object, 0, size_t(-1)}}, NoSideEffect | ConstExpr | Builtin, true, {}, safe ? builtin_size() : builtin_size_unsafe() },
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hruntime_error), MxType{MxType::Void},	{MxType{MxType::Object, 0, size_t(-1)}}, Builtin, false, {}, builtin_runtime_error()},
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hruntime_error), MxType{MxType::Void},	{MxType{MxType::Object, 0, size_t(-1)}}, Builtin | NoInline, false, {}, builtin_runtime_error()},
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hstrcat),		MxType{MxType::String},		{MxType{MxType::String}, MxType{MxType::String}}, NoSideEffect | ConstExpr | Builtin, false, {}, builtin_strcat()},
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hstrcmp),		MxType{MxType::Integer},	{MxType{MxType::String}, MxType{MxType::String}}, NoSideEffect | ConstExpr | Builtin, false, {}, builtin_strcmp()},
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_bool),	MxType::Null(),				{MxType{MxType::Bool, 1}, MxType{MxType::Integer}}, NoSideEffect | ConstExpr | Builtin, true, {}, safe ? builtin_subscript_safe(1) : builtin_subscript_unsafe(1) },
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_int),	MxType::Null(),				{MxType{MxType::Integer, 1 }, MxType{ MxType::Integer } }, NoSideEffect | ConstExpr | Builtin, true,{}, safe ? builtin_subscript_safe(4) : builtin_subscript_unsafe(4) },
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_object),	MxType::Null(),				{ MxType{ MxType::Object, 1, size_t(-1)}, MxType{ MxType::Integer } }, NoSideEffect | ConstExpr | Builtin, true,{}, safe ? builtin_subscript_safe(8) : builtin_subscript_unsafe(8)},
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_bool),	MxType::Null(),				{MxType{MxType::Bool, 1}, MxType{MxType::Integer}}, NoSideEffect | ConstExpr | Builtin | ForceInline, true, {}, safe ? builtin_subscript_safe(1) : builtin_subscript_unsafe(1) },
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_int),	MxType::Null(),				{MxType{MxType::Integer, 1 }, MxType{ MxType::Integer } }, NoSideEffect | ConstExpr | Builtin | ForceInline, true,{}, safe ? builtin_subscript_safe(4) : builtin_subscript_unsafe(4) },
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_object),	MxType::Null(),				{ MxType{ MxType::Object, 1, size_t(-1)}, MxType{ MxType::Integer } }, NoSideEffect | ConstExpr | Builtin | ForceInline, true,{}, safe ? builtin_subscript_safe(8) : builtin_subscript_unsafe(8)},
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hnewobject),	MxType::Null(),				{MxType::Null(), MxType::Null()}, Builtin, false, {}, builtin_newobject()},
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_string), MxType{MxType::Void},	{MxType{MxType::String}}, Builtin, false, {}, builtin_stub()/*TODO*/ },
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_array_internal), MxType{MxType::Void}, {MxType::Null()}, Builtin, false, {}, builtin_stub()/*TODO*/},
-		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_string), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub()/*TODO*/ },
-		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub()/*TODO*/ },
-		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub()/*TODO*/ },
-		MxProgram::funcInfo{ size_t(BuiltinSymbol::Haddref_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub()/*TODO*/ },
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_string), MxType{MxType::Void},	{MxType{MxType::String}}, Builtin, false, {}, builtin_stub({RegPtr(0)})/*TODO*/ },
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_array_internal), MxType{MxType::Void}, {MxType::Null()}, Builtin, false, {}, builtin_stub({RegPtr(0), Reg32(1)})/*TODO*/},
+		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_string), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0) })/*TODO*/ },
+		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0), Reg32(1) })/*TODO*/ },
+		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0) })/*TODO*/ },
+		MxProgram::funcInfo{ size_t(BuiltinSymbol::Haddref_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0) })/*TODO*/ },
 		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hnewobject_zero), MxType::Null(), { MxType::Null(), MxType::Null() }, Builtin, false,{}, builtin_newobject_zero() },
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hinitialize), MxType{MxType::Void}, {}, Builtin, false, {}},
 	};
@@ -861,12 +861,13 @@ MxIR::Function MxBuiltin::builtin_newobject_zero()
 	return ret;
 }
 
-MxIR::Function MxBuiltin::builtin_stub()
+MxIR::Function MxBuiltin::builtin_stub(const std::vector<Operand> &param)
 {
 	Function ret;
 	ret.inBlock = Block::construct();
 	ret.outBlock = Block::construct();
 	ret.inBlock->ins = { IRReturn() };
 	ret.inBlock->brTrue = ret.outBlock;
+	ret.params = param;
 	return ret;
 }

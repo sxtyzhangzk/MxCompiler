@@ -683,6 +683,8 @@ void CodeGeneratorBasic::generateProgram()
 	writeCode("section .text");
 	for (size_t i = 0; i < program->vFuncs.size(); i++)
 	{
+		if (program->vFuncs[i].disabled)
+			continue;
 		generateFunc(program->vFuncs[i], labelFunc[i]);
 		out << std::endl;
 	}
