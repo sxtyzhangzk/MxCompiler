@@ -2,8 +2,8 @@ CFLAGS_O2 := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -O2 -DNDEBUG
 CFLAGS := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -O1 -DNDEBUG
 CFLAGS_O0 := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -DNDEBUG
 
-mxcompiler: libantlr4-runtime.a antlr_generated.a libboost_program_options.a common_headers.h.gch option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoopDetector.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o DomTree.o MaxClique.o
-	g++ option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoopDetector.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o DomTree.o MaxClique.o antlr_generated.a libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
+mxcompiler: libantlr4-runtime.a antlr_generated.a libboost_program_options.a common_headers.h.gch option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoopDetector.o LoopInvariantOptimizer.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o CycleEquiv.o DomTree.o MaxClique.o
+	g++ option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o GlobalSymbol.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoopDetector.o LoopInvariantOptimizer.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o CycleEquiv.o DomTree.o MaxClique.o antlr_generated.a libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
 
 common_headers.h.gch: ../src/common_headers.h
 	g++ ../src/common_headers.h -o common_headers.h.gch $(CFLAGS)
@@ -32,6 +32,8 @@ IssueCollector.o: ../src/IssueCollector.cpp
 	g++ -c ../src/IssueCollector.cpp -o IssueCollector.o $(CFLAGS)
 LoopDetector.o: ../src/LoopDetector.cpp
 	g++ -c ../src/LoopDetector.cpp -o LoopDetector.o $(CFLAGS_O2)
+LoopInvariantOptimizer.o: ../src/LoopInvariantOptimizer.cpp
+	g++ -c ../src/LoopInvariantOptimizer.cpp -o LoopInvariantOptimizer.o $(CFLAGS_O2)
 main.o: ../src/main.cpp
 	g++ -c ../src/main.cpp -o main.o $(CFLAGS)
 MxBuiltin.o: ../src/MxBuiltin.cpp
@@ -46,6 +48,8 @@ SSAReconstructor.o: ../src/SSAReconstructor.cpp
 	g++ -c ../src/SSAReconstructor.cpp -o SSAReconstructor.o $(CFLAGS_O2)
 StaticTypeChecker.o: ../src/StaticTypeChecker.cpp
 	g++ -c ../src/StaticTypeChecker.cpp -o StaticTypeChecker.o $(CFLAGS)
+CycleEquiv.o: ../src/utils/CycleEquiv.cpp
+	g++ -c ../src/utils/CycleEquiv.cpp -o CycleEquiv.o $(CFLAGS_O2)
 DomTree.o: ../src/utils/DomTree.cpp
 	g++ -c ../src/utils/DomTree.cpp -o DomTree.o $(CFLAGS_O2)
 MaxClique.o: ../src/utils/MaxClique.cpp

@@ -84,6 +84,7 @@ public:
 	bool disable_access_protect = false;
 	bool optim_register_allocation = false;
 	bool optim_inline = false;
+	bool optim_loop_invariant = false;
 	int inline_param = 1000, inline_param2 = 25;
 
 	static CompileFlags * getInstance()

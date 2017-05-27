@@ -8,7 +8,7 @@
 class IRVisualizer
 {
 public:
-	IRVisualizer(std::ostream &out) : out(out), symbol(GlobalSymbol::getDefault()), program(MxProgram::getDefault()), cntBlock(0) {}
+	IRVisualizer(std::ostream &out) : out(out), symbol(GlobalSymbol::getDefault()), program(MxProgram::getDefault()), cntBlock(0), cntCluster(0) {}
 	std::string toString(const MxIR::Operand &operand, bool isHTML);
 	std::string toString(const MxIR::Instruction &ins, bool isHTML);
 	std::string toString(const MxIR::Block &block, bool isHTML);
@@ -25,7 +25,7 @@ protected:
 	GlobalSymbol *symbol;
 	MxProgram *program;
 	bool enableColor;
-	size_t cntBlock;
+	size_t cntBlock, cntCluster;
 };
 
 #endif

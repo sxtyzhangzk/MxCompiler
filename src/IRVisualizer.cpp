@@ -124,6 +124,9 @@ std::string IRVisualizer::toString(const Instruction &ins, bool isHTML)
 	case Allocate:
 		ss << toString(ins.dst) << " = allocate " << toString(ins.src1) << ", align " << toString(ins.src2);
 		return ss.str();
+	case TestZero:
+		ss << toString(ins.dst) << " = test_zero " << toString(ins.src1) << ", " << toString(ins.src2);
+		return ss.str();
 	case LockReg: case UnlockReg:
 		ss << (ins.oper == LockReg ? "lock(" : "unlock(");
 		for (size_t i = 0; i < ins.paramExt.size(); i++)
@@ -243,6 +246,7 @@ void IRVisualizer::print(const Function &func, const std::string &funcName)
 {
 	if (!func.inBlock)
 		return;
+	
 	std::unordered_map<Block *, size_t> mapID;
 	std::vector<Block *> vBlock;
 	func.inBlock->traverse([&](Block *block) -> bool
@@ -251,14 +255,43 @@ void IRVisualizer::print(const Function &func, const std::string &funcName)
 		vBlock.push_back(block);
 		return true;
 	});
+
+	if (func.pstRoot)
+	{
+		std::function<void(PSTNode *)> dfs;
+		dfs = [&](PSTNode *node)
+		{
+			out << "subgraph cluster" << cntCluster++ << " {" << std::endl;
+			for (Block *block : node->blocks)
+			{
+				int flag = 0;
+				if (block == func.inBlock.get())
+					flag = 1;
+				else if (block == func.outBlock.get())
+					flag = 2;
+				out << mapID[block] + cntBlock << " [shape=none,label=<" << toHTML(*block, flag, funcName) << ">];" << std::endl;
+			}
+			for (auto &child : node->children)
+				dfs(child.get());
+			out << "}" << std::endl;
+		};
+		dfs(func.pstRoot.get());
+	}
+	else
+	{
+		for (size_t i = 0; i < vBlock.size(); i++)
+		{
+			int flag = 0;
+			if (vBlock[i] == func.inBlock.get())
+				flag = 1;
+			else if (vBlock[i] == func.outBlock.get())
+				flag = 2;
+			out << i + cntBlock << " [shape=none,label=<" << toHTML(*vBlock[i], flag, funcName) << ">];" << std::endl;
+		}
+	}
+
 	for (size_t i = 0; i < vBlock.size(); i++)
 	{
-		int flag = 0;
-		if (vBlock[i] == func.inBlock.get())
-			flag = 1;
-		else if (vBlock[i] == func.outBlock.get())
-			flag = 2;
-		out << i + cntBlock << " [shape=none,label=<" << toHTML(*vBlock[i], flag, funcName) << ">];" << std::endl;
 		if (vBlock[i]->brTrue)
 			out << i + cntBlock << ":btrue -> " << mapID.find(vBlock[i]->brTrue.get())->second + cntBlock << ";" << std::endl;
 		if (vBlock[i]->brFalse)

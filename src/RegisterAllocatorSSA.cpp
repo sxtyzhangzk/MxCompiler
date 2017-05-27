@@ -53,12 +53,12 @@ namespace MxIR
 		computeLoop();
 		relabelVReg();
 		computeVarOp();
-		computeVarGroup();
 		computeDefUses();
+		computeVarGroup();
 		computeNextUse();
 		computeMaxPressure();
 		computeExternalVar();
-
+		
 		spillRegister();
 		eliminateSpillCode();
 		insertAllocateCode();
@@ -72,7 +72,7 @@ namespace MxIR
 
 		coalesce();
 
-		//writeRegInfo(); return;
+		/*writeRegInfo(); return;*/
 
 		destructSSA();
 		writeRegInfo();
@@ -416,23 +416,92 @@ namespace MxIR
 
 	void RegisterAllocatorSSA::computeVarGroup()
 	{
-		UnionFindSet ufs(nVar);
-		func.inBlock->traverse([&ufs, this](Block *block) -> bool
+		/*
+			Due to the transforms on SSA form, some values of a phi-node may live in the same time.
+			We need to manually add some copy instructions to ensure all values related to a phi-node can be put into one memory address.
+		*/
+		analysisLiveness();
+		buildInterferenceGraph();
+		auto copySrc = [this](std::pair<Operand, std::weak_ptr<Block>> &src)
+		{
+			std::shared_ptr<Block> pred = src.second.lock();
+
+			size_t newVar = nVar++;
+			Operand op = RegSize(newVar, src.first.size());
+			ifGraph.emplace_back();
+			ifGraph.back().root = newVar;
+			assert(ifGraph.size() == nVar);
+
+			varOp.push_back(op);
+			assert(varOp.size() == nVar);
+
+			pred->ins.insert(std::prev(pred->ins.end()), IR(op, Move, src.first));
+			src.first = op;
+		};
+		func.inBlock->traverse([&copySrc, this](Block *block) -> bool
 		{
 			for (auto &kv : block->phi)
 			{
-				const Block::PhiIns &phi = kv.second;
+				Block::PhiIns &phi = kv.second;
 				assert(phi.dst.isReg());
 				assert(phi.dst.size() == varOp[phi.dst.val].size());
+
+				std::map<size_t, size_t> vtxIndex;	//vreg id -> vertex id in MaxClique graph
+				std::vector<std::vector<decltype(&phi.srcs[0])>> regSrc;	//vertex id -> src in phi insn
 				for (auto &src : phi.srcs)
 				{
 					if (!src.first.isReg())
 						continue;
 					assert(src.first.size() == phi.dst.size());
 					assert(src.first.size() == varOp[src.first.val].size());
-					ufs.merge(phi.dst.val, src.first.val);
-					//std::cerr << "MERGE " << phi.dst.val << " " << src.first.val;
+					
+					if (ifGraph[findVertexRoot(src.first.val)].neighbor.count(findVertexRoot(phi.dst.val)))
+						copySrc(src);
+					else
+					{
+						size_t idx;
+						if (vtxIndex.count(src.first.val))
+							idx = vtxIndex[src.first.val];
+						else
+						{
+							idx = vtxIndex.size();
+							vtxIndex[src.first.val] = idx;
+							regSrc.emplace_back();
+						}
+						regSrc[idx].push_back(&src);
+					}
 				}
+				
+				MaxClique solver(vtxIndex.size());
+				for (auto iterI = vtxIndex.cbegin(); iterI != vtxIndex.cend(); ++iterI)
+					for (auto iterJ = std::next(iterI); iterJ != vtxIndex.cend(); ++iterJ)
+					{
+						size_t rootI = findVertexRoot(iterI->first);
+						size_t rootJ = findVertexRoot(iterJ->first);
+						if (!ifGraph[rootI].neighbor.count(rootJ) && !ifGraph[rootJ].neighbor.count(rootI))
+							solver.link(iterI->second, iterJ->second);
+					}
+				std::set<size_t> setMaxClique;
+				for (size_t vtx : solver.findMaxClique())
+					setMaxClique.insert(vtx);
+				for (size_t i = 0; i < regSrc.size(); i++)
+				{
+					if (!setMaxClique.count(i))
+					{
+						for(auto src : regSrc[i])
+							copySrc(*src);
+					}
+				}
+
+				std::set<size_t> vertices;
+				vertices.insert(phi.dst.val);
+				for (auto &src : phi.srcs)
+				{
+					if (!src.first.isReg())
+						continue;
+					vertices.insert(src.first.val);
+				}
+				mergeVertices(vertices);
 			}
 			return true;
 		});
@@ -441,7 +510,7 @@ namespace MxIR
 		std::map<size_t, std::set<size_t>> member;
 		for (size_t i = 0; i < nVar; i++)
 		{
-			size_t root = ufs.findRoot(i);
+			size_t root = findVertexRoot(i);
 			assert(varOp[i].type == varOp[root].type);
 			size_t gid;
 			if (!groupID.count(root))
@@ -454,13 +523,6 @@ namespace MxIR
 			varGroup.push_back(gid);
 			member[gid].insert(i);
 		}
-		/*for (auto &kv : member)
-		{
-			std::cerr << "Member of group " << kv.first << ": ";
-			for (size_t mem : kv.second)
-				std::cerr << mem << " ";
-			std::cerr << std::endl;
-		}*/
 	}
 
 	void RegisterAllocatorSSA::computeExternalVar()
@@ -904,6 +966,12 @@ namespace MxIR
 
 	void RegisterAllocatorSSA::analysisLiveness()
 	{
+		for (auto &kv : property)
+		{
+			kv.second.liveIn.clear();
+			kv.second.liveOut.clear();
+		}
+
 		std::queue<Block *> Q;
 		std::map<Block *, std::set<size_t>> updatedVar;
 		auto newLiveOut = [&Q, &updatedVar, this](Block *block, size_t var)
@@ -969,6 +1037,7 @@ namespace MxIR
 		/*func.inBlock->traverse([this](Block *block) -> bool
 		{
 			std::stringstream ss;
+			ss << "Idx: " << property[block].idx << std::endl;
 			ss << "Live In: ";
 			for (size_t vreg : property[block].liveIn)
 				ss << vreg << ", ";
@@ -979,15 +1048,16 @@ namespace MxIR
 			ss << std::endl;
 			block->dbgInfo = ss.str();
 			return true;
-		});*/
+		});
 
-		/*if (!property[func.inBlock.get()].liveIn.empty())
+		if (!property[func.inBlock.get()].liveIn.empty())
 			std::cerr << "Non-empty live in!" << std::endl;*/
 		assert(property[func.inBlock.get()].liveIn.empty());
 	}
 
 	void RegisterAllocatorSSA::buildInterferenceGraph()
 	{
+		ifGraph.clear();
 		ifGraph.resize(nVar);
 		for (size_t i = 0; i < ifGraph.size(); i++)
 			ifGraph[i].root = i;
@@ -1012,7 +1082,8 @@ namespace MxIR
 			std::set<size_t> live = bp.liveIn;
 			auto interfere = [&live, &forbiddenReg, this](size_t vreg, std::shared_ptr<std::set<int>> altForbiddenReg)
 			{
-				assert(live.size() <= phyReg.size() - (forbiddenReg ? forbiddenReg->size() : 0));
+				assert(!live.count(vreg));
+				//assert(live.size() <= phyReg.size() - (forbiddenReg ? forbiddenReg->size() : 0));
 				for (size_t neighbor : live)
 				{
 					ifGraph[vreg].neighbor.insert(neighbor);
@@ -1328,7 +1399,7 @@ namespace MxIR
 			ssize_t ret = adjust(u, targetRegister);
 			if (u == keyVertex && ret != -1)
 				return -1;
-			if (ret == u)
+			if (ret == u || ret == keyVertex)
 			{
 				cand.clear(); changedReg.clear();
 				fail(u);
@@ -1491,7 +1562,7 @@ namespace MxIR
 					clique.link(i, j);
 			}
 		for (size_t t : clique.findMaxClique())
-			S.insert(graphID[t]);
+			S.insert(originalID[t]);
 	}
 
 	RegisterAllocatorSSA::OptimUnitOne::OptimUnitOne(RegisterAllocatorSSA &allocator, size_t u, size_t v) : OptimUnit(allocator, 2, -1)
@@ -1588,6 +1659,7 @@ namespace MxIR
 			assert(ifGraph[vtx].preg == ifGraph[root].preg);
 			for (size_t neighbor : ifGraph[vtx].neighbor)
 			{
+				assert(neighbor != vtx);
 				ifGraph[root].neighbor.insert(neighbor);
 				ifGraph[neighbor].neighbor.erase(vtx);
 				ifGraph[neighbor].neighbor.insert(root);

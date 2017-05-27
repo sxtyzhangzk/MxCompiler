@@ -547,6 +547,14 @@ void CodeGenerator::translateIns(Instruction ins)
 		writeCode("test ", getOperand(ins.src1), ", ", getOperand(ins.src1));
 		return;
 	}
+	if (ins.oper == TestZero)
+	{
+		assert(ins.src1.isReg());
+		writeCode("mov ", getOperand(ins.dst), ", ", getOperand(ins.src2));
+		writeCode("test ", getOperand(ins.src1), ", ", getOperand(ins.src1));
+		writeCode("cmovnz ", getOperand(ins.dst), ", ", getOperand(ins.src1));
+		return;
+	}
 
 	static const std::unordered_map<int, std::string> mapInsCmp = {
 		{ Slt, "setl" },{ Sle, "setle" },{ Seq, "sete" },{ Sne, "setne" },{ Sgt, "setg" },{ Sge, "setge" },

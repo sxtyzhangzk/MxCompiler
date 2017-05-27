@@ -11,7 +11,7 @@ namespace MxIR
 	{
 		Nop,
 		Add, Sub,			//dst = src1 op src2, dst & src1 & src2 must have the same size
-		Mult, Div, Mod, 
+		Mult, Div, Mod,
 		Shlu, Shru,
 		Shl, Shr,			//FIXME: signed shift
 		And, Or, Xor,
@@ -29,6 +29,8 @@ namespace MxIR
 		//CallExternal,		//src1 should be func name (in symbol table)	(DEPRECATED)
 		Return,				//return with value src1
 		Allocate,			//alloc a var in stack with size of src1 bytes and align to src2 bytes, alloc hint store in paramExt[0]
+
+		TestZero,			//dst = test_zero src1, src2: if src1 == 0, dst = src2; else dst = src1
 
 		//Operations below are only avaliable when allocating register & generating code 
 		LockReg,
@@ -261,6 +263,23 @@ namespace MxIR
 	}
 	inline Instruction IRUnlockRegister() { return Instruction(UnlockReg); }
 
+	class Block;
+	struct PSTNode
+	{
+		Block *inBlock, *outBlock;
+		std::set<Block *> blocks;
+
+		std::list<std::shared_ptr<PSTNode>> children;
+		std::list<std::shared_ptr<PSTNode>>::iterator iterParent;
+		std::weak_ptr<PSTNode> parent, self;
+
+		bool isSibling(PSTNode *other) const { return parent.lock() == other->parent.lock(); }
+		void traverse(std::function<void(PSTNode *)> func);
+		bool isSingleBlock() const
+		{
+			return inBlock == outBlock && blocks.size() == 1 && children.empty();
+		}
+	};
 	//FIXME: Possible Memory Leak
 	class Block
 	{
@@ -345,11 +364,14 @@ namespace MxIR
 		std::weak_ptr<Block> self;
 		std::list<Block *> preds;
 
+		std::weak_ptr<PSTNode> pstNode;
+
 		IF_DEBUG(std::string dbgInfo);
 
 	public:
 		static std::shared_ptr<Block> construct();
 		void traverse(std::function<bool(Block *)> func);
+		void traverse_preorder(std::function<bool(Block *)> func);
 		void traverse_postorder(std::function<bool(Block *)> func);
 		void traverse_rev_postorder(std::function<bool(Block *)> func);
 		auto instructions()
@@ -372,6 +394,10 @@ namespace MxIR
 		std::vector<Operand> params;
 		std::shared_ptr<Block> inBlock, outBlock;
 
+		std::shared_ptr<PSTNode> pstRoot;
+
+		void constructPST();
+		void splitProgramRegion();
 		Function clone();
 	};
 }

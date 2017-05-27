@@ -13,6 +13,7 @@
 #include "SSAConstructor.h"
 #include "CodeGenerator.h"
 #include "InlineOptimizer.h"
+#include "LoopInvariantOptimizer.h"
 using namespace std;
 
 int compile(const std::string &fileName, const std::string &output)
@@ -69,6 +70,14 @@ int compile(const std::string &fileName, const std::string &output)
 		if (CompileFlags::getInstance()->optim_register_allocation)
 		{
 			MxIR::SSAConstructor::constructSSA(&program);
+			if (CompileFlags::getInstance()->optim_loop_invariant)
+			{
+				for (auto &func : program.vFuncs)
+				{
+					MxIR::LoopInvariantOptimizer optim(func.content);
+					optim.work();
+				}
+			}
 			std::ofstream fout(output);
 			CodeGenerator codegen(fout);
 			codegen.generateProgram();
