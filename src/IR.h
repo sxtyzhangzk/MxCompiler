@@ -379,6 +379,7 @@ namespace MxIR
 			auto pair_second = [](auto &p) -> auto& { return p.second; };
 			return join<InstructionBase>(element_adapter(phi, pair_second), ins, element_adapter(sigma, pair_second));
 		}
+		void redirectPhiSrc(Block *from, Block *to);
 
 	protected:
 		std::list<Block *>::iterator newPred(Block *pred);
@@ -398,6 +399,7 @@ namespace MxIR
 
 		void constructPST();
 		void splitProgramRegion();
+		void mergeBlocks();
 		Function clone();
 	};
 }

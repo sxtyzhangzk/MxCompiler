@@ -609,6 +609,21 @@ namespace MxIR
 					++iter;
 			}
 
+			assert(property[block].Wentry.size() <= phyReg.size());
+			assert(property[block].Wexit.size() <= phyReg.size());
+#if defined(_DEBUG) && !defined(NDEBUG)
+			std::stringstream ss;
+			ss << "Wentry: " << std::endl;
+			for (size_t i : property[block].Wentry)
+				ss << i << " ";
+			ss << std::endl;
+			ss << "Wexit: " << std::endl;
+			for (size_t i : property[block].Wexit)
+				ss << i << " ";
+			ss << std::endl;
+			block->dbgInfo += "\n" + ss.str();
+#endif
+
 			return true;
 		});
 	}
@@ -739,6 +754,7 @@ namespace MxIR
 			}
 
 			std::vector<size_t> reload;
+			size_t nOperandLastUse = 0;
 			for (Operand *operand : iter->getInputReg() | needreg)
 			{
 				if (std::find(W.begin(), W.end(), operand->val) == W.end())
@@ -747,15 +763,11 @@ namespace MxIR
 					W.push_back(operand->val);
 					std::push_heap(W.begin(), W.end(), cmpVarUse);
 				}
+				if (varUse[operand->val].size() == 1)
+					nOperandLastUse++;
 			}
 			limitReg(remainRegister, iter);
-			for (Operand *operand : iter->getInputReg() | needreg)
-			{
-				assert(varUse[operand->val].top() == curInsn);
-				varUse[operand->val].pop();
-			}
-			std::make_heap(W.begin(), W.end(), cmpVarUse);
-
+			
 			std::vector<size_t> outRegValid;
 			for (Operand *operand : iter->getOutputReg() | hasreg)
 			{
@@ -764,7 +776,15 @@ namespace MxIR
 				else
 					outRegValid.push_back(operand->val);
 			}
-			limitReg(remainRegister - outRegValid.size(), iter);
+			limitReg(remainRegister - outRegValid.size() + nOperandLastUse, iter);
+
+			for (Operand *operand : iter->getInputReg() | needreg)
+			{
+				assert(varUse[operand->val].top() == curInsn);
+				varUse[operand->val].pop();
+			}
+			std::make_heap(W.begin(), W.end(), cmpVarUse);
+
 			for (size_t vreg : outRegValid)
 			{
 				if (vreg == Operand::InvalidID)
@@ -1034,7 +1054,8 @@ namespace MxIR
 			}
 		}
 
-		/*func.inBlock->traverse([this](Block *block) -> bool
+#if defined(_DEBUG) && !defined(NDEBUG)
+		func.inBlock->traverse([this](Block *block) -> bool
 		{
 			std::stringstream ss;
 			ss << "Idx: " << property[block].idx << std::endl;
@@ -1049,10 +1070,12 @@ namespace MxIR
 			block->dbgInfo = ss.str();
 			return true;
 		});
+		
 
 		if (!property[func.inBlock.get()].liveIn.empty())
-			std::cerr << "Non-empty live in!" << std::endl;*/
-		assert(property[func.inBlock.get()].liveIn.empty());
+			std::cerr << "Non-empty live in!" << std::endl;
+#endif
+		//assert(property[func.inBlock.get()].liveIn.empty());
 	}
 
 	void RegisterAllocatorSSA::buildInterferenceGraph()
@@ -1229,12 +1252,32 @@ namespace MxIR
 					return false;
 			return true;
 		};
+		static int lastReg = phyReg[phyReg.size() - 1];
 		for (int preg : prefer)
 			if (testRegister(preg))
-				return preg;
-		for (int preg : phyReg)
-			if (testRegister(preg))
-				return preg;
+				return lastReg = preg;
+		
+		bool flag = false;
+		for (size_t i = 0; i < phyReg.size(); i++)
+		{
+			if (lastReg == phyReg[i])
+			{
+				for (size_t j = 1; j <= phyReg.size(); j++)
+				{
+					int preg = phyReg[(j + i) % phyReg.size()];
+					if (testRegister(preg))
+						return lastReg = preg;
+				}
+				flag = true;
+				break;
+			}
+		}
+		if (!flag)
+		{
+			for (int preg : phyReg)
+				if (testRegister(preg))
+					return lastReg = preg;
+		}
 		assert(false);
 		return -1;
 	}

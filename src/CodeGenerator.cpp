@@ -47,6 +47,8 @@ void CodeGenerator::generateFunc(MxProgram::funcInfo &finfo, const std::string &
 	regAllocator.work();
 
 	regularizeInsnPost();
+	func->mergeBlocks();
+
 	allocateStackFrame();
 
 	writeLabel(label);

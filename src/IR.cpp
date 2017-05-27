@@ -326,9 +326,9 @@ namespace MxIR
 						{
 							if (!loopBody.count(src.second.lock().get()))
 							{
-								upperPhi.srcs.push_back(src);
-								if (src.first.isReg())
-									bRedundantUpperPhi = false;
+upperPhi.srcs.push_back(src);
+if (src.first.isReg())
+bRedundantUpperPhi = false;
 							}
 							else
 							{
@@ -338,7 +338,7 @@ namespace MxIR
 									bRedundantRemainPhi = false;
 							}
 						}
-						
+
 						if (bRedundantRemainPhi)
 						{
 							upperPhi.dst = iter->second.dst;
@@ -385,8 +385,8 @@ namespace MxIR
 			{
 				assert(block->phi.empty());
 				auto spliceEnd = std::prev(block->ins.end());
-				if (block->ins.size() >= 2 
-					&& block->ins.back().oper == Br 
+				if (block->ins.size() >= 2
+					&& block->ins.back().oper == Br
 					&& std::prev(block->ins.end(), 2)->dst.val == block->ins.back().src1.val
 					&& std::prev(block->ins.end(), 2)->dst.ver == block->ins.back().src1.ver)
 				{
@@ -410,6 +410,98 @@ namespace MxIR
 						inBlock = tmp;
 				}
 			}
+		}
+	}
+
+	void Block::redirectPhiSrc(Block *from, Block *to)
+	{
+		for (auto &kv : phi)
+			for (auto &src : kv.second.srcs)
+				if (src.second.lock().get() == from)
+					src.second = to->self;
+	}
+
+	void Function::mergeBlocks()
+	{
+		std::set<Block *> blocks;
+		inBlock->traverse([&blocks](Block *block) -> bool
+		{
+			blocks.insert(block);
+			return true;
+		});
+
+		for (auto iter = blocks.begin(); iter != blocks.end(); )
+		{
+			std::shared_ptr<Block> block = (*iter)->self.lock();
+			if (block == outBlock)
+			{
+				++iter;
+				continue;
+			}
+			if (block->preds.size() == 1)
+			{
+				Block *pred = block->preds.front();
+				if (pred->brTrue.get() == block.get() && !pred->brFalse)
+				{
+					pred->ins.pop_back();
+					pred->ins.splice(pred->ins.end(), block->ins);
+
+					if(block->brTrue)
+						block->brTrue->redirectPhiSrc(block.get(), pred);
+					if (block->brFalse)
+						block->brFalse->redirectPhiSrc(block.get(), pred);
+
+					pred->brTrue = block->brTrue;
+					pred->brFalse = block->brFalse;
+					block->brTrue.reset();
+					block->brFalse.reset();
+					iter = blocks.erase(iter);
+					continue;
+				}
+			}
+			if (block->ins.size() == 1 && block->ins.back().oper == Jump)
+			{
+				std::map<Operand, Block::PhiIns> phi;
+				for (auto &kv : block->phi)
+					phi[kv.second.dst] = kv.second;
+
+				Block *next = block->brTrue.get();
+				for (auto &kv : next->phi) //TODO: check if it is correct
+				{
+					decltype(kv.second.srcs) newSrc;
+					for (auto iterSrc = kv.second.srcs.begin(); iterSrc != kv.second.srcs.end(); ++iterSrc)
+					{
+						if (iterSrc->second.lock() == block)
+						{
+							if (!phi.count(iterSrc->first))
+							{
+								for (Block *pred : block->preds)
+									newSrc.push_back(std::make_pair(EmptyOperand(), pred->self));
+							}
+							else
+							{
+								for (auto &src : phi[iterSrc->first].srcs)
+									newSrc.push_back(src);
+							}
+						}
+						else
+							newSrc.push_back(*iterSrc);
+					}
+					kv.second.srcs = newSrc;
+				}
+
+				for (Block *pred : std::list<Block *>(block->preds))
+				{
+					if (pred->brTrue.get() == block.get())
+						pred->brTrue = next->self.lock();
+					if (pred->brFalse.get() == block.get())
+						pred->brFalse = next->self.lock();
+				}
+				block->brTrue.reset();
+				iter = blocks.erase(iter);
+				continue;
+			}
+			++iter;
 		}
 	}
 }

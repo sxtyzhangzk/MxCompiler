@@ -320,6 +320,9 @@ namespace MxIR
 	{
 		if (insn->oper == Div || insn->oper == Mod)
 		{
+			if (insn->src2.isImm())
+				return;
+			assert(insn->src2.isReg());
 			Operand tmp = RegSize(maxVer.empty() ? 0 : maxVer.rbegin()->first + 1, insn->src2.size());
 			maxVer[tmp.val] = 0;
 			block->ins.insert(insn, IR(tmp, TestZero, insn->src2, ImmSize(1, insn->src1.size())));
