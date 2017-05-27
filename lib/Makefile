@@ -15,7 +15,7 @@ AST.o: ../src/AST.cpp
 ASTConstructor.o: ../src/ASTConstructor.cpp
 	g++ -c ../src/ASTConstructor.cpp -o ASTConstructor.o $(CFLAGS)
 CodeGenerator.o: ../src/CodeGenerator.cpp
-	g++ -c ../src/CodeGenerator.cpp -o CodeGenerator.o $(CFLAGS_O2)
+	g++ -c ../src/CodeGenerator.cpp -o CodeGenerator.o $(CFLAGS)
 CodeGeneratorBasic.o: ../src/CodeGeneratorBasic.cpp
 	g++ -c ../src/CodeGeneratorBasic.cpp -o CodeGeneratorBasic.o $(CFLAGS)
 ConstantFold.o: ../src/ConstantFold.cpp
@@ -49,7 +49,7 @@ SSAReconstructor.o: ../src/SSAReconstructor.cpp
 StaticTypeChecker.o: ../src/StaticTypeChecker.cpp
 	g++ -c ../src/StaticTypeChecker.cpp -o StaticTypeChecker.o $(CFLAGS)
 CycleEquiv.o: ../src/utils/CycleEquiv.cpp
-	g++ -c ../src/utils/CycleEquiv.cpp -o CycleEquiv.o $(CFLAGS_O2)
+	g++ -c ../src/utils/CycleEquiv.cpp -o CycleEquiv.o $(CFLAGS)
 DomTree.o: ../src/utils/DomTree.cpp
 	g++ -c ../src/utils/DomTree.cpp -o DomTree.o $(CFLAGS_O2)
 MaxClique.o: ../src/utils/MaxClique.cpp
