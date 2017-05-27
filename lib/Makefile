@@ -19,23 +19,23 @@ CodeGenerator.o: ../src/CodeGenerator.cpp
 CodeGeneratorBasic.o: ../src/CodeGeneratorBasic.cpp
 	g++ -c ../src/CodeGeneratorBasic.cpp -o CodeGeneratorBasic.o $(CFLAGS)
 ConstantFold.o: ../src/ConstantFold.cpp
-	g++ -c ../src/ConstantFold.cpp -o ConstantFold.o $(CFLAGS)
+	g++ -c ../src/ConstantFold.cpp -o ConstantFold.o $(CFLAGS_O0)
 GlobalSymbol.o: ../src/GlobalSymbol.cpp
 	g++ -c ../src/GlobalSymbol.cpp -o GlobalSymbol.o $(CFLAGS)
 InlineOptimizer.o: ../src/InlineOptimizer.cpp
-	g++ -c ../src/InlineOptimizer.cpp -o InlineOptimizer.o $(CFLAGS_O2)
+	g++ -c ../src/InlineOptimizer.cpp -o InlineOptimizer.o $(CFLAGS)
 IR.o: ../src/IR.cpp
-	g++ -c ../src/IR.cpp -o IR.o $(CFLAGS_O2)
+	g++ -c ../src/IR.cpp -o IR.o $(CFLAGS)
 IRGenerator.o: ../src/IRGenerator.cpp
 	g++ -c ../src/IRGenerator.cpp -o IRGenerator.o $(CFLAGS)
 IssueCollector.o: ../src/IssueCollector.cpp
-	g++ -c ../src/IssueCollector.cpp -o IssueCollector.o $(CFLAGS)
+	g++ -c ../src/IssueCollector.cpp -o IssueCollector.o $(CFLAGS_O0)
 LoopDetector.o: ../src/LoopDetector.cpp
-	g++ -c ../src/LoopDetector.cpp -o LoopDetector.o $(CFLAGS_O2)
+	g++ -c ../src/LoopDetector.cpp -o LoopDetector.o $(CFLAGS)
 LoopInvariantOptimizer.o: ../src/LoopInvariantOptimizer.cpp
 	g++ -c ../src/LoopInvariantOptimizer.cpp -o LoopInvariantOptimizer.o $(CFLAGS_O2)
 main.o: ../src/main.cpp
-	g++ -c ../src/main.cpp -o main.o $(CFLAGS)
+	g++ -c ../src/main.cpp -o main.o $(CFLAGS_O0)
 MxBuiltin.o: ../src/MxBuiltin.cpp
 	g++ -c ../src/MxBuiltin.cpp -o MxBuiltin.o $(CFLAGS)
 MxProgram.o: ../src/MxProgram.cpp
@@ -43,9 +43,9 @@ MxProgram.o: ../src/MxProgram.cpp
 RegisterAllocatorSSA.o: ../src/RegisterAllocatorSSA.cpp
 	g++ -c ../src/RegisterAllocatorSSA.cpp -o RegisterAllocatorSSA.o $(CFLAGS_O2)
 SSAConstructor.o: ../src/SSAConstructor.cpp
-	g++ -c ../src/SSAConstructor.cpp -o SSAConstructor.o $(CFLAGS_O2)
+	g++ -c ../src/SSAConstructor.cpp -o SSAConstructor.o $(CFLAGS)
 SSAReconstructor.o: ../src/SSAReconstructor.cpp
-	g++ -c ../src/SSAReconstructor.cpp -o SSAReconstructor.o $(CFLAGS_O2)
+	g++ -c ../src/SSAReconstructor.cpp -o SSAReconstructor.o $(CFLAGS)
 StaticTypeChecker.o: ../src/StaticTypeChecker.cpp
 	g++ -c ../src/StaticTypeChecker.cpp -o StaticTypeChecker.o $(CFLAGS)
 CycleEquiv.o: ../src/utils/CycleEquiv.cpp
