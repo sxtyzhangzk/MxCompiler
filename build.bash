@@ -1,5 +1,6 @@
 set -e
 cat /proc/cpuinfo | grep "model name"
+cat /proc/meminfo | grep "MemTotal"
 rm -rf build
 mkdir -p build
 cd build
