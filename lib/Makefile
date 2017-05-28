@@ -35,7 +35,7 @@ IssueCollector.o: ../src/IssueCollector.cpp
 LoopDetector.o: ../src/LoopDetector.cpp
 	g++ -c ../src/LoopDetector.cpp -o LoopDetector.o $(CFLAGS)
 LoopInvariantOptimizer.o: ../src/LoopInvariantOptimizer.cpp
-	g++ -c ../src/LoopInvariantOptimizer.cpp -o LoopInvariantOptimizer.o $(CFLAGS)
+	g++ -c ../src/LoopInvariantOptimizer.cpp -o LoopInvariantOptimizer.o $(CFLAGS_O2)
 main.o: ../src/main.cpp
 	g++ -c ../src/main.cpp -o main.o $(CFLAGS_O0)
 MxBuiltin.o: ../src/MxBuiltin.cpp
