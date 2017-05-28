@@ -44,9 +44,10 @@ namespace MxIR
 					insertPoint = pred;
 				}
 
+			if (insertPoint->brTrue.get() != lp.header)
+				throw 233;
 			assert(insertPoint->brTrue.get() == lp.header);
-			if (insertPoint->brFalse)
-				break;
+			
 			assert(!insertPoint->brFalse);
 			
 			createInvars(lp);
@@ -90,6 +91,11 @@ namespace MxIR
 						{
 							ptr->dependOn.erase(region->index);
 							continue;
+						}
+						if (upmostParent->dependOn.count(i))
+						{
+							upmostParent->dependOn.erase(i);
+							vInvar[i]->dependBy.erase(upmostParent->index);
 						}
 						upmostParent->dependBy.insert(i);
 						vInvar[i]->dependOn.insert(upmostParent->index);
@@ -335,7 +341,8 @@ namespace MxIR
 		if (worked)
 			return;
 		assert(!isPhi);
-		if (insn->oper == Move && insn->src1.isConst() && dependBy.empty())
+		static const std::set<Operation> blacklist = { Seq, Sne, Sgt, Sge, Slt, Sle, Sgtu, Sgeu, Sltu, Sleu, Move };
+		if (dependBy.empty() && blacklist.count(insn->oper))
 			return;
 		auto iter = parent.insertPoint->ins.insert(std::prev(parent.insertPoint->ins.end()), *insn);
 		parent.protectDivisor(parent.insertPoint, iter);

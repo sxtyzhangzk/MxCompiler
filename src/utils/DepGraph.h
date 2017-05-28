@@ -7,28 +7,42 @@
 class DepGraph
 {
 public:
-	DepGraph(size_t cntVertex);
-	void link(size_t u, size_t v);
-	std::vector<size_t> nextVertex();
+	DepGraph(size_t cntVertex) : V(cntVertex) {}
+	void link(size_t u, size_t v)
+	{
+		V.at(u).to.push_back(v);
+		V.at(v).to.push_back(u);
+	}
+	void work();
+	const std::vector<size_t> & getVertex(size_t i)
+	{
+		return VGroup.at(i).vtxs;
+	}
 
 protected:
 	struct vertex
 	{
-		size_t firstEdge;
-		vertex() : firstEdge(-1) {}
+		std::vector<size_t> to;
+
+		bool visited = false;
+		size_t dfn, lowlink;
+		ssize_t groupID = -1;
 	};
-	struct edge
+	struct vtxGroup
 	{
-		size_t to;
-		size_t nextEdge;
+		std::vector<size_t> vtxs;
+		size_t indegree = 0;
 	};
 
 protected:
-	void trajan(size_t idx);
+	void trajan(size_t idx, std::stack<size_t> &S);
+	void sort();
 
 protected:
-	std::vector<vertex> vtxs;
-	std::vector<edge> edges;
+	std::vector<vertex> V;
+
+	size_t dfsclock;
+	std::vector<vtxGroup> VGroup;
 };
 
 #endif

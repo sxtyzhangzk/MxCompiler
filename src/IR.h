@@ -273,12 +273,15 @@ namespace MxIR
 		std::list<std::shared_ptr<PSTNode>>::iterator iterParent;
 		std::weak_ptr<PSTNode> parent, self;
 
-		bool isSibling(PSTNode *other) const { return parent.lock() == other->parent.lock(); }
 		void traverse(std::function<void(PSTNode *)> func);
+		std::set<Block *> getBlocks();
+
+		bool isSibling(PSTNode *other) const { return parent.lock() == other->parent.lock(); }
 		bool isSingleBlock() const
 		{
 			return inBlock == outBlock && blocks.size() == 1 && children.empty();
 		}
+		
 	};
 	//FIXME: Possible Memory Leak
 	class Block

@@ -171,6 +171,17 @@ namespace MxIR
 		dfs(this);
 	}
 
+	std::set<Block *> PSTNode::getBlocks()
+	{
+		std::set<Block *> ret;
+		traverse([&ret](PSTNode *node)
+		{
+			for (Block *block : node->blocks)
+				ret.insert(block);
+		});
+		return ret;
+	}
+
 	void Function::constructPST()
 	{
 		std::map<Block *, size_t> blockID;
@@ -326,9 +337,9 @@ namespace MxIR
 						{
 							if (!loopBody.count(src.second.lock().get()))
 							{
-upperPhi.srcs.push_back(src);
-if (src.first.isReg())
-bRedundantUpperPhi = false;
+								upperPhi.srcs.push_back(src);
+								if (src.first.isReg())
+									bRedundantUpperPhi = false;
 							}
 							else
 							{
@@ -363,6 +374,21 @@ bRedundantUpperPhi = false;
 							++iter;
 						}
 					}
+				}
+				else if (entryPred.front()->brTrue && entryPred.front()->brFalse)
+				{
+					Block *pred = entryPred.front();
+
+					std::shared_ptr<Block> blockPreheader = Block::construct();
+					blockPreheader->ins = { IRJump() };
+					blockPreheader->brTrue = block->self.lock();
+
+					if (pred->brTrue.get() == block)
+						pred->brTrue = blockPreheader->self.lock();
+					if (pred->brFalse.get() == block)
+						pred->brFalse = blockPreheader->self.lock();
+
+					block->redirectPhiSrc(pred, blockPreheader.get());
 				}
 				continue;
 			}
