@@ -744,12 +744,16 @@ void IRGenerator::visit(ASTStatementReturn *stat)
 		assert(expr);
 		setFlag(Read);
 		//stat->retExpr->accept(this);
-		visitExpr(stat->retExpr.get());
+		visitExprRec(stat->retExpr.get());
 		resumeFlag();
 		merge(cur);
 		
 		if (expr->exprType.isObject())
 			cur->ins.push_back(IRCall(EmptyOperand(), IDFunc(size_t(MxBuiltin::BuiltinFunc::addref_object)), { lastOperand }));
+
+		clearXValueStack();
+		merge(cur);
+
 		cur->ins.push_back(IRReturn(lastOperand));
 	}
 	else
@@ -996,10 +1000,19 @@ void IRGenerator::visitExprRec(ASTNode *node)
 
 	if ((visFlag & Write) && expr->exprType.isObject())
 	{
+		std::shared_ptr<Block> blk(Block::construct());
+		std::shared_ptr<Block> cur = blk;
+
 		setFlag(visFlag | Read);
 		expr->accept(this);
 		resumeFlag();
-		stkXValues.push({ lastOperand, expr->exprType });
+		merge(cur);
+		cur->ins.push_back(releaseXValue(lastOperand, expr->exprType));
+		merge(cur);
+
+		lastBlockIn = std::move(blk);
+		lastBlockOut = std::move(cur);
+		//stkXValues.push({ lastOperand, expr->exprType });
 	}
 	else if (expr->vType == xvalue)
 	{
