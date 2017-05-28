@@ -996,6 +996,7 @@ MxIR::Function MxBuiltin::builtin_release_array(bool internal)
 		IR(RegPtr(3), Load, RegPtr(0)),
 		IR(RegPtr(3), Shl, RegPtr(3), ImmPtr(3)),
 		IR(RegPtr(3), Add, RegPtr(3), ImmPtr(8)),
+		IR(RegPtr(3), Add, RegPtr(3), RegPtr(0)),
 		IR(RegPtr(4), Add, RegPtr(0), ImmPtr(8)),
 		IRJump(),
 	};
@@ -1010,7 +1011,7 @@ MxIR::Function MxBuiltin::builtin_release_array(bool internal)
 
 	block[4]->ins = {
 		IR(RegPtr(6), Load, RegPtr(4)),
-		IRCall(EmptyOperand(), IDFunc(size_t(BuiltinFunc::release_array_object)), {RegPtr(6), Reg32(7)}),
+		IRCall(EmptyOperand(), IDFunc(size_t(internal ? BuiltinFunc::release_array_internal : BuiltinFunc::release_array_object)), {RegPtr(6), Reg32(7)}),
 		IR(RegPtr(4), Add, RegPtr(4), ImmPtr(8)),
 		IRJump(),
 	};

@@ -78,6 +78,7 @@ protected:
 	std::map<size_t, size_t> mapStringConstID;
 
 	size_t funcID;
+	std::vector<size_t> declaredVar;
 
 	enum vflag : std::uint32_t
 	{ 

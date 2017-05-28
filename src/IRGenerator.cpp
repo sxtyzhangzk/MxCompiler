@@ -173,6 +173,7 @@ void IRGenerator::redirectReturn(std::shared_ptr<Block> inBlock, std::shared_ptr
 
 void IRGenerator::visit(ASTDeclVar *declVar)
 {
+	declaredVar.push_back(declVar->varID);
 	if (declVar->initVal)
 	{
 		std::shared_ptr<Block> blk(Block::construct());
@@ -1061,8 +1062,10 @@ void IRGenerator::releaseLocalVar()
 		program->vFuncs[funcID].paramType.size() - 1 :
 		program->vFuncs[funcID].paramType.size();
 
-	for (size_t i = cntParam; i < program->vLocalVars[funcID].size(); i++)
+	for (size_t i : declaredVar)
 	{
+		if (i < cntParam)
+			continue;
 		auto &var = program->vLocalVars[funcID][i];
 		if (var.varType.isObject())
 			lastIns.push_back(releaseXValue(RegPtr(i), var.varType));
@@ -1173,6 +1176,8 @@ void IRGenerator::generateProgram(MxAST::ASTRoot *root)
 		if (declFunc)
 		{
 			funcID = declFunc->funcID;
+			declaredVar.clear();
+
 			program->vFuncs[declFunc->funcID].content = generate(declFunc);
 			continue;
 		}
@@ -1184,6 +1189,8 @@ void IRGenerator::generateProgram(MxAST::ASTRoot *root)
 				ASTDeclFunc *memberFunc = dynamic_cast<ASTDeclFunc *>(member.get());
 				assert(memberFunc);
 				funcID = memberFunc->funcID;
+				declaredVar.clear();
+
 				program->vFuncs[memberFunc->funcID].content = generate(memberFunc);
 			}
 		}
