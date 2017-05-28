@@ -485,7 +485,7 @@ namespace MxIR
 					continue;
 				}
 			}
-			if (block->ins.size() == 1 && block->ins.back().oper == Jump)
+			if (block->ins.size() == 1 && block->ins.back().oper == Jump && block != inBlock)
 			{
 				std::map<Operand, Block::PhiIns> phi;
 				for (auto &kv : block->phi)
