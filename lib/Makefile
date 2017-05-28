@@ -11,7 +11,7 @@ common_headers.h.gch: ../src/common_headers.h
 ASM_x64.o: ../src/ASM_x64.cpp
 	g++ -c ../src/ASM_x64.cpp -o ASM_x64.o $(CFLAGS_O0)
 AST.o: ../src/AST.cpp
-	g++ -c ../src/AST.cpp -o AST.o $(CFLAGS_O0)
+	g++ -c ../src/AST.cpp -o AST.o $(CFLAGS)
 ASTConstructor.o: ../src/ASTConstructor.cpp
 	g++ -c ../src/ASTConstructor.cpp -o ASTConstructor.o $(CFLAGS)
 CodeGenerator.o: ../src/CodeGenerator.cpp
@@ -21,7 +21,7 @@ CodeGeneratorBasic.o: ../src/CodeGeneratorBasic.cpp
 ConstantFold.o: ../src/ConstantFold.cpp
 	g++ -c ../src/ConstantFold.cpp -o ConstantFold.o $(CFLAGS_O0)
 DeadCodeElimination.o: ../src/DeadCodeElimination.cpp
-	g++ -c ../src/DeadCodeElimination.cpp -o DeadCodeElimination.o $(CFLAGS)
+	g++ -c ../src/DeadCodeElimination.cpp -o DeadCodeElimination.o $(CFLAGS_O2)
 GlobalSymbol.o: ../src/GlobalSymbol.cpp
 	g++ -c ../src/GlobalSymbol.cpp -o GlobalSymbol.o $(CFLAGS_O0)
 InlineOptimizer.o: ../src/InlineOptimizer.cpp
@@ -39,7 +39,7 @@ LoopInvariantOptimizer.o: ../src/LoopInvariantOptimizer.cpp
 main.o: ../src/main.cpp
 	g++ -c ../src/main.cpp -o main.o $(CFLAGS_O0)
 MxBuiltin.o: ../src/MxBuiltin.cpp
-	g++ -c ../src/MxBuiltin.cpp -o MxBuiltin.o $(CFLAGS_O0)
+	g++ -c ../src/MxBuiltin.cpp -o MxBuiltin.o $(CFLAGS)
 MxProgram.o: ../src/MxProgram.cpp
 	g++ -c ../src/MxProgram.cpp -o MxProgram.o $(CFLAGS_O0)
 RegisterAllocatorSSA.o: ../src/RegisterAllocatorSSA.cpp
@@ -49,10 +49,10 @@ SSAConstructor.o: ../src/SSAConstructor.cpp
 SSAReconstructor.o: ../src/SSAReconstructor.cpp
 	g++ -c ../src/SSAReconstructor.cpp -o SSAReconstructor.o $(CFLAGS)
 StaticTypeChecker.o: ../src/StaticTypeChecker.cpp
-	g++ -c ../src/StaticTypeChecker.cpp -o StaticTypeChecker.o $(CFLAGS_O0)
+	g++ -c ../src/StaticTypeChecker.cpp -o StaticTypeChecker.o $(CFLAGS)
 CycleEquiv.o: ../src/utils/CycleEquiv.cpp
-	g++ -c ../src/utils/CycleEquiv.cpp -o CycleEquiv.o $(CFLAGS)
+	g++ -c ../src/utils/CycleEquiv.cpp -o CycleEquiv.o $(CFLAGS_O2)
 DomTree.o: ../src/utils/DomTree.cpp
-	g++ -c ../src/utils/DomTree.cpp -o DomTree.o $(CFLAGS)
+	g++ -c ../src/utils/DomTree.cpp -o DomTree.o $(CFLAGS_O2)
 MaxClique.o: ../src/utils/MaxClique.cpp
 	g++ -c ../src/utils/MaxClique.cpp -o MaxClique.o $(CFLAGS_O2)
