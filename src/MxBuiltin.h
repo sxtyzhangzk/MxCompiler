@@ -141,6 +141,7 @@ protected:
 
 	MxIR::Function builtin_addref_object();
 	MxIR::Function builtin_release_string();
+	MxIR::Function builtin_release_array(bool internal);
 
 	MxIR::Function builtin_stub(const std::vector<MxIR::Operand> &param);
 

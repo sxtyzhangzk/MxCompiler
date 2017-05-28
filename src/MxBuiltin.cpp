@@ -68,9 +68,9 @@ void MxBuiltin::fillBuiltinMemberTable()
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hsubscript_object),	MxType::Null(),				{ MxType{ MxType::Object, 1, size_t(-1)}, MxType{ MxType::Integer } }, NoSideEffect | ConstExpr | Builtin | ForceInline, true,{}, safe ? builtin_subscript_safe(8) : builtin_subscript_unsafe(8)},
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hnewobject),	MxType::Null(),				{MxType::Null(), MxType::Null()}, Builtin, false, {}, builtin_newobject()},
 		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_string), MxType{MxType::Void},	{MxType{MxType::String}}, Builtin, false, {}, /*builtin_stub({ RegPtr(0) })*/builtin_release_string()},
-		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_array_internal), MxType{MxType::Void}, {MxType::Null()}, Builtin, false, {}, builtin_stub({RegPtr(0), Reg32(1)})/*TODO*/},
+		MxProgram::funcInfo{size_t(BuiltinSymbol::Hrelease_array_internal), MxType{MxType::Void}, {MxType::Null()}, Builtin, false, {}, /*builtin_stub({RegPtr(0), Reg32(1)})*/ builtin_release_array(true)/*TODO*/},
 		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_string), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0) })/*TODO*/ },
-		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0), Reg32(1) })/*TODO*/ },
+		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_array_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, /*builtin_stub({ RegPtr(0), Reg32(1) })*/ builtin_release_array(false)/*TODO*/ },
 		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hrelease_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_stub({ RegPtr(0) })/*TODO*/ },
 		MxProgram::funcInfo{ size_t(BuiltinSymbol::Haddref_object), MxType{ MxType::Void },{ MxType::Null() }, Builtin, false,{}, builtin_addref_object() },
 		MxProgram::funcInfo{ size_t(BuiltinSymbol::Hnewobject_zero), MxType::Null(), { MxType::Null(), MxType::Null() }, Builtin, false,{}, builtin_newobject_zero() },
@@ -947,6 +947,86 @@ MxIR::Function MxBuiltin::builtin_release_string()
 	ret.inBlock = block[0];
 	ret.outBlock = block[5];
 	ret.params = { RegPtr(0) };
+	return ret;
+}
+
+MxIR::Function MxBuiltin::builtin_release_array(bool internal)
+{
+	std::shared_ptr<Block> block[10];
+	for (auto &blk : block)
+		blk = Block::construct();
+
+	block[7]->ins = {
+		IR(Reg8(9), Sne, RegPtr(0), ImmPtr(0)),
+		IRBranch(Reg8(9)),
+	};
+	block[7]->brTrue = block[8];
+	block[7]->brFalse = block[9];
+
+	block[8]->ins = {
+		IR(RegPtr(10), LoadA, RegPtr(0), ImmPtr(-std::int64_t(objectHeader))),
+		IR(RegPtr(10), Sub, RegPtr(10), ImmPtr(1)),
+		IRStoreA(RegPtr(10), RegPtr(0), ImmPtr(-std::int64_t(objectHeader))),
+		IR(Reg8(11), Seq, RegPtr(10), ImmPtr(0)),
+		IRBranch(Reg8(11)),
+	};
+	block[8]->brTrue = block[0];
+	block[8]->brFalse = block[9];
+
+	block[9]->ins = {
+		IRReturn(),
+	};
+	block[9]->brTrue = block[6];
+
+	block[0]->ins = {
+		IR(Reg8(2), Sle, Reg32(1), Imm32(internal ? 1 : 0)),
+		IRBranch(Reg8(2)),
+	};
+	block[0]->brTrue = internal ? block[5] : block[1];
+	block[0]->brFalse = block[2];
+
+	block[1]->ins = {
+		IRCall(EmptyOperand(), IDFunc(size_t(BuiltinFunc::release_object)), {RegPtr(0)}),
+		IRReturn(),
+	};
+	block[1]->brTrue = block[6];
+
+	block[2]->ins = {
+		IR(Reg32(7), Sub, Reg32(1), Imm32(1)),
+		IR(RegPtr(3), Load, RegPtr(0)),
+		IR(RegPtr(3), Shl, RegPtr(3), ImmPtr(3)),
+		IR(RegPtr(3), Add, RegPtr(3), ImmPtr(8)),
+		IR(RegPtr(4), Add, RegPtr(0), ImmPtr(8)),
+		IRJump(),
+	};
+	block[2]->brTrue = block[3];
+
+	block[3]->ins = {
+		IR(Reg8(5), Seq, RegPtr(4), RegPtr(3)),
+		IRBranch(Reg8(5), unlikely),
+	};
+	block[3]->brTrue = block[5];
+	block[3]->brFalse = block[4];
+
+	block[4]->ins = {
+		IR(RegPtr(6), Load, RegPtr(4)),
+		IRCall(EmptyOperand(), IDFunc(size_t(BuiltinFunc::release_array_object)), {RegPtr(6), Reg32(7)}),
+		IR(RegPtr(4), Add, RegPtr(4), ImmPtr(8)),
+		IRJump(),
+	};
+	block[4]->brTrue = block[3];
+
+	block[5]->ins = {
+		IR(RegPtr(8), Sub, RegPtr(0), ImmPtr(objectHeader)),
+		IRCall(EmptyOperand(), IDExtSymbol(size_t(BuiltinSymbol::free)), {RegPtr(8)}),
+		IRReturn(),
+	};
+	block[5]->brTrue = block[6];
+
+	Function ret;
+	ret.inBlock = block[7];
+	ret.outBlock = block[6];
+	ret.params = { RegPtr(0), Reg32(1) };
 	return ret;
 }
 

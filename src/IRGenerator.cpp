@@ -754,10 +754,18 @@ void IRGenerator::visit(ASTStatementReturn *stat)
 		clearXValueStack();
 		merge(cur);
 
+		releaseLocalVar();
+		merge(cur);
+
 		cur->ins.push_back(IRReturn(lastOperand));
 	}
 	else
-		cur->ins = { IRReturn() };
+	{
+		releaseLocalVar();
+		merge(cur);
+
+		cur->ins.push_back(IRReturn());
+	}
 	cur->brTrue = returnBlock;
 	lastBlockIn = std::move(blk);
 	lastBlockOut = std::move(cur);
@@ -1047,6 +1055,20 @@ void IRGenerator::clearXValueStack()
 	}
 }
 
+void IRGenerator::releaseLocalVar()
+{
+	size_t cntParam = program->vFuncs[funcID].isThiscall ?
+		program->vFuncs[funcID].paramType.size() - 1 :
+		program->vFuncs[funcID].paramType.size();
+
+	for (size_t i = cntParam; i < program->vLocalVars[funcID].size(); i++)
+	{
+		auto &var = program->vLocalVars[funcID][i];
+		if (var.varType.isObject())
+			lastIns.push_back(releaseXValue(RegPtr(i), var.varType));
+	}
+}
+
 
 size_t IRGenerator::findMain()
 {
@@ -1150,6 +1172,7 @@ void IRGenerator::generateProgram(MxAST::ASTRoot *root)
 		ASTDeclFunc *declFunc = dynamic_cast<ASTDeclFunc *>(child.get());
 		if (declFunc)
 		{
+			funcID = declFunc->funcID;
 			program->vFuncs[declFunc->funcID].content = generate(declFunc);
 			continue;
 		}
@@ -1160,6 +1183,7 @@ void IRGenerator::generateProgram(MxAST::ASTRoot *root)
 			{
 				ASTDeclFunc *memberFunc = dynamic_cast<ASTDeclFunc *>(member.get());
 				assert(memberFunc);
+				funcID = memberFunc->funcID;
 				program->vFuncs[memberFunc->funcID].content = generate(memberFunc);
 			}
 		}

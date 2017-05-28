@@ -58,6 +58,8 @@ protected:
 	void visitExpr(MxAST::ASTNode *node);
 	void clearXValueStack();
 
+	void releaseLocalVar();
+
 	size_t findMain();
 
 protected:
@@ -74,6 +76,8 @@ protected:
 	size_t regNum, regThis;
 
 	std::map<size_t, size_t> mapStringConstID;
+
+	size_t funcID;
 
 	enum vflag : std::uint32_t
 	{ 
