@@ -48,6 +48,12 @@ namespace MxIR
 
 	void RegisterAllocatorSSA::work()
 	{
+		//func.inBlock->traverse([](Block *block) -> bool
+		//{
+		//	assert(block->checkPhiSrc());
+		//	return true;
+		//});
+
 		splitCriticalEdge();
 
 		computeDomTree();
@@ -91,6 +97,7 @@ namespace MxIR
 				continue;
 			if (block->brTrue.get() == block->brFalse.get())
 			{
+				assert(false);
 				block->ins.back() = IRJump();
 				block->brFalse.reset();
 				continue;

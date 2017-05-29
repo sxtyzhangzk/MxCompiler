@@ -393,7 +393,9 @@ namespace MxIR
 			{Shr, ValueBinary::Shr}, {Shlu, ValueBinary::Shlu}, {Shru, ValueBinary::Shru},
 		};
 		if (mapOperBinary.count(insn.oper))
+		{
 			return reduceValue(new ValueBinary(mapOperBinary.find(insn.oper)->second, insn.dst.size(), getOperand(insn.src1), getOperand(insn.src2)));
+		}
 
 		static const std::map<Operation, ValueUnary::Operator> mapOperUnary = {
 			{Not, ValueUnary::Not}, {Neg, ValueUnary::Neg}, {Sext, ValueUnary::Sext}, {Zext, ValueUnary::Zext},
@@ -416,18 +418,19 @@ namespace MxIR
 			
 			for (auto *operand : { &oper1, &oper2 })
 			{
-				if (ValueCommAssoc *child = dynamic_cast<ValueCommAssoc *>(operand->get()))
+				ValueCommAssoc *childCA = dynamic_cast<ValueCommAssoc *>(operand->get());
+				if (childCA && childCA->oper == oper)
 				{
 					if (insn.oper == Sub && operand == &oper2)
 					{
-						for (auto &var : child->varValue)
+						for (auto &var : childCA->varValue)
 							varVal.emplace_back(reduceValue(new ValueUnary(ValueUnary::Neg, var->length, var)));
-						immVal -= child->immValue.val;
+						immVal -= childCA->immValue.val;
 					}
 					else
 					{
-						std::copy(child->varValue.begin(), child->varValue.end(), std::back_inserter(varVal));
-						immVal = ValueCommAssoc::caculate(immVal, oper, child->immValue.val);
+						std::copy(childCA->varValue.begin(), childCA->varValue.end(), std::back_inserter(varVal));
+						immVal = ValueCommAssoc::caculate(immVal, oper, childCA->immValue.val);
 					}
 				}
 				else if (ValueImm *child = dynamic_cast<ValueImm *>(operand->get()))

@@ -224,6 +224,8 @@ namespace MxIR
 				return 0;
 		}
 
+		
+
 		/*std::cerr << "eliminate region with " << blocks.size() << " blocks" << std::endl;
 		IRVisualizer visual(std::cerr);
 		std::cerr << visual.toString(**blocks.begin(), false) << std::endl;*/
@@ -243,6 +245,24 @@ namespace MxIR
 			}
 
 		std::shared_ptr<Block> inBlock = node->inBlock->self.lock();
+
+		bool flag = false;
+		std::shared_ptr<Block> tmp;
+		if (pred->brTrue.get() == next || pred->brFalse.get() == next)
+		{
+			if (blocks.size() == 1 && (*blocks.begin())->ins.size() == 1 && (*blocks.begin())->ins.front().oper == Jump)
+				flag = true;
+
+			tmp = Block::construct();
+			tmp->ins = { IRJump() };
+			if (inBlock.get() == pred->brTrue.get())
+				pred->brTrue = tmp;
+			if (inBlock.get() == pred->brFalse.get())
+				pred->brFalse = tmp;
+			tmp->brTrue = inBlock;
+			pred = tmp.get();
+		}
+		
 		if (inBlock.get() == pred->brTrue.get())
 			pred->brTrue = next->self.lock();
 		if (inBlock.get() == pred->brFalse.get())
@@ -254,7 +274,8 @@ namespace MxIR
 		else
 			node->outBlock->brFalse.reset();
 
-		regionUpdated = true;
+		if(!flag)
+			regionUpdated = true;
 		
 		return 1;
 	}
