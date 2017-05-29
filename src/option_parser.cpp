@@ -14,6 +14,7 @@ std::tuple<int, std::string, std::string> ParseOptions(int argc, char *argv[])
 		("optim-inline", "enable inline expansion")
 		("optim-loop-invariant", "enable loop invariant optimization")
 		("optim-dead-code", "enable dead code elimination")
+		("optim-gvn", "enable global value numbering")
 		("inline-param", value<int>()->value_name("param"), "the parameter for inline optimizer")
 		("inline-param2", value<int>()->value_name("param"), "the parameter 2 for inline optimizer");;
 
@@ -53,6 +54,8 @@ std::tuple<int, std::string, std::string> ParseOptions(int argc, char *argv[])
 		CompileFlags::getInstance()->optim_loop_invariant = true;
 	if (vm.count("optim-dead-code"))
 		CompileFlags::getInstance()->optim_dead_code = true;
+	if (vm.count("optim-gvn"))
+		CompileFlags::getInstance()->optim_gvn = true;
 	if (!vm.count("input"))
 	{
 		std::cerr << argv[0] << ": no input file" << std::endl;

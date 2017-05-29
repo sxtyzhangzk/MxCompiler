@@ -224,6 +224,10 @@ namespace MxIR
 				return 0;
 		}
 
+		/*std::cerr << "eliminate region with " << blocks.size() << " blocks" << std::endl;
+		IRVisualizer visual(std::cerr);
+		std::cerr << visual.toString(**blocks.begin(), false) << std::endl;*/
+
 		Block *pred = nullptr, *next = nullptr;
 		for (Block *block : node->inBlock->preds)
 			if (!blocks.count(block))

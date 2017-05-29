@@ -2,9 +2,12 @@
 #define MX_COMPILER_COMMON_H
 
 #if defined(_DEBUG) && !defined(NDEBUG)
+#define IS_DEBUG
 #define IF_DEBUG(x) x
+#define IFNOT_DEBUG(x)
 #else
 #define IF_DEBUG(x)
+#define IFNOT_DEBUG(x) x
 #endif
 
 #include "common_headers.h"
@@ -86,6 +89,7 @@ public:
 	bool optim_inline = false;
 	bool optim_loop_invariant = false;
 	bool optim_dead_code = false;
+	bool optim_gvn = false;
 	int inline_param = 1000, inline_param2 = 25;
 
 	static CompileFlags * getInstance()

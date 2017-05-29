@@ -216,7 +216,7 @@ namespace MxIR
 			{
 				//assert(!varCurVersion[in->val].empty());
 				assert(varCurVersion[in->val].top().val == in->val);
-				*in = varCurVersion[in->val].top();
+				*in = varCurVersion[in->val].top().clone().setSize(in->size());
 			}
 
 			for (Operand *out : ins.getOutputReg())

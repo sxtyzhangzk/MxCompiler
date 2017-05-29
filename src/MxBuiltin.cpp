@@ -320,8 +320,8 @@ Function MxBuiltin::builtin_length()
 	block[1]->brTrue = block[3];
 
 	block[2]->ins = {
-		IR(RegPtr(2), Load, RegPtr(0)),
-		IRReturn(RegPtr(2)),
+		IR(Reg32(2), Load, RegPtr(0)),
+		IRReturn(Reg32(2)),
 	};
 	block[2]->brTrue = block[3];
 

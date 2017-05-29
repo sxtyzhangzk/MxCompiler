@@ -69,6 +69,28 @@ namespace MxIR
 		Operand & setVal(std::uint64_t newVal) { val = newVal; return *this; }
 		Operand & setPRegID(int newRegID) { pregid = newRegID; return *this; }
 		Operand & setNOReg(bool newFlag) { noreg = newFlag; return *this; }
+		Operand & setSize(size_t size)
+		{
+			assert(isImm() || isReg());
+			switch (size)
+			{
+			case 8:
+				type = isImm() ? imm64 : reg64;
+				break;
+			case 4:
+				type = isImm() ? imm32 : reg32;
+				break;
+			case 2:
+				type = isImm() ? imm16 : reg16;
+				break;
+			case 1:
+				type = isImm() ? imm8 : reg8;
+				break;
+			default:
+				assert(false);
+			}
+			return *this;
+		}
 
 		bool isImm() const { return type == imm64 || type == imm32 || type == imm16 || type == imm8; }
 		bool isReg() const { return type == reg64 || type == reg32 || type == reg16 || type == reg8; }
@@ -383,6 +405,7 @@ namespace MxIR
 			return join<InstructionBase>(element_adapter(phi, pair_second), ins, element_adapter(sigma, pair_second));
 		}
 		void redirectPhiSrc(Block *from, Block *to);
+		bool checkPhiSrc();
 
 	protected:
 		std::list<Block *>::iterator newPred(Block *pred);

@@ -132,6 +132,24 @@ namespace MxIR
 		preds.erase(iterPred);
 	}
 
+	bool Block::checkPhiSrc()
+	{
+		if (phi.empty())
+			return true;
+
+		std::set<Block *> phisrc;
+		for(auto &kv : phi)
+			for (auto &src : kv.second.srcs)
+				phisrc.insert(src.second.lock().get());
+		for (Block *pred : preds)
+		{
+			if (!phisrc.count(pred))
+				return false;
+			phisrc.erase(pred);
+		}
+		return phisrc.empty();
+	}
+
 	Function Function::clone()
 	{
 		std::map<Block *, std::shared_ptr<Block>> mapNewBlock;	// old block -> new block

@@ -49,6 +49,7 @@ namespace MxIR
 	void RegisterAllocatorSSA::work()
 	{
 		splitCriticalEdge();
+
 		computeDomTree();
 		computeLoop();
 		relabelVReg();
@@ -115,8 +116,6 @@ namespace MxIR
 			{
 				for (auto &src : kv.second.srcs)
 				{
-					if (!src.first.isReg())
-						continue;
 					std::shared_ptr<Block> oldPred = src.second.lock();
 					if (!newPred[block].count(oldPred.get()))
 						continue;
@@ -436,6 +435,7 @@ namespace MxIR
 			assert(varOp.size() == nVar);
 
 			pred->ins.insert(std::prev(pred->ins.end()), IR(op, Move, src.first));
+			property[pred.get()].definedVar.insert(newVar);
 			src.first = op;
 		};
 		func.inBlock->traverse([&copySrc, this](Block *block) -> bool
@@ -451,7 +451,11 @@ namespace MxIR
 				for (auto &src : phi.srcs)
 				{
 					if (!src.first.isReg())
+					{
+						if (src.first.type != Operand::empty)
+							copySrc(src);
 						continue;
+					}
 					assert(src.first.size() == phi.dst.size());
 					assert(src.first.size() == varOp[src.first.val].size());
 					
@@ -730,6 +734,9 @@ namespace MxIR
 						W.push_back(operand->val);
 						std::push_heap(W.begin(), W.end(), cmpVarUse);
 					}
+
+					if(operand->val != Operand::InvalidID)
+						operand->setSize(varOp[operand->val].size());
 					dst.push_back(*operand);
 					src.push_back(operand->clone().setPRegID(-1));
 				}

@@ -15,6 +15,7 @@
 #include "InlineOptimizer.h"
 #include "LoopInvariantOptimizer.h"
 #include "DeadCodeElimination.h"
+#include "GVN.h"
 using namespace std;
 
 int compile(const std::string &fileName, const std::string &output)
@@ -71,6 +72,14 @@ int compile(const std::string &fileName, const std::string &output)
 		if (CompileFlags::getInstance()->optim_register_allocation)
 		{
 			MxIR::SSAConstructor::constructSSA(&program);
+			if (CompileFlags::getInstance()->optim_gvn)
+			{
+				for (auto &func : program.vFuncs)
+				{
+					MxIR::GVN optim(func.content);
+					optim.work();
+				}
+			}
 			if (CompileFlags::getInstance()->optim_dead_code)
 			{
 				for (auto &func : program.vFuncs)

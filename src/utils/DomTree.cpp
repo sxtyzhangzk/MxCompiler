@@ -84,7 +84,7 @@ void DomTree::calcIdom()
 			V[idx].semi = idv[semi_dfn];
 		}
 		else
-			V[idx].semi = 0;
+			V[idx].semi = idx;
 		
 		semiDomList[V[idx].semi].push_back(idx);
 		
@@ -143,7 +143,7 @@ void DomTree::calcDomFrontier()
 
 void DomTree::verifyIdom()
 {
-	std::vector<size_t> idomTrue(V.size(), 0);
+	std::vector<size_t> idomTrue(V.size(), idv[0]);
 	for (size_t dfn = 1; dfn < V.size(); dfn++)
 	{
 		for (size_t idx = 0; idx < V.size(); idx++)
@@ -156,7 +156,7 @@ void DomTree::verifyIdom()
 				if (!V[next].visited && V[next].dfn != dfn)
 					traverse(next);
 		};
-		traverse(0);
+		traverse(idv[0]);
 		for (size_t idx = 0; idx < V.size(); idx++)
 			if (!V[idx].visited && idx != idv[dfn])
 				idomTrue[idx] = idv[dfn];
