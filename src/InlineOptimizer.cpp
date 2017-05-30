@@ -64,7 +64,9 @@ namespace MxIR
 						applyInline(cur.idx, i, content);
 						assert(!stats[i].callTo.count(cur.idx));
 						stats[i].nUpdate++;
-						Q.push(Tqueue{ i, stats[i].nUpdate, stats[i].penalty() });
+
+						if(!(program->vFuncs[i].attribute & NoInline))
+							Q.push(Tqueue{ i, stats[i].nUpdate, stats[i].penalty() });
 					}
 				if(flag && !(program->vFuncs[cur.idx].attribute & Export))
 					program->vFuncs[cur.idx].disabled = true;

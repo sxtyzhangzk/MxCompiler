@@ -107,8 +107,8 @@ void CodeGenerator::regularizeInsnPre()
 {
 	static const std::set<Operation> commutativeOp = { Add, Mult, And, Or, Xor, Seq, Sne, LoadA, StoreA };
 	static const std::map<Operation, Operation> semiCommutiveOp = {
-		{Slt, Sge}, {Sle, Sgt}, {Sgt, Sle}, {Sge, Slt},
-		{Sltu, Sgeu}, {Sleu, Sgtu}, {Sgtu, Sleu}, {Sgeu, Sltu},
+		{Slt, Sgt}, {Sle, Sge}, {Sgt, Slt}, {Sge, Sle},
+		{Sltu, Sgtu}, {Sleu, Sgeu}, {Sgtu, Sltu}, {Sgeu, Sleu},
 	};
 	func->inBlock->traverse([this](Block *block) -> bool
 	{
