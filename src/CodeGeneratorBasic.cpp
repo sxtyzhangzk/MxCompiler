@@ -288,7 +288,7 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 				size_t trueIdx = mapBlocks.find(block->brTrue.get())->second;
 				size_t falseIdx = mapBlocks.find(block->brFalse.get())->second;
 
-				if (!i->src1.isReg())
+				if (i->src1.type == Operand::empty)
 				{
 					assert(block->ins.size() >= 2 && mapInsCmp.count(std::prev(i)->oper));
 					std::string pos = mapInsCmp.find(std::prev(i)->oper)->second.first;
