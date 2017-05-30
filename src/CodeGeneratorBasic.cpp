@@ -260,6 +260,11 @@ std::vector<Block *> CodeGeneratorBasic::sortBlocks(Block *inBlock)
 
 void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBlocks)
 {
+	static const std::unordered_map<int, std::pair<std::string, std::string>> mapInsCmp = {
+		{ Slt, {"jl", "jge"} },{ Sle, {"jle", "jg"} },{ Seq, {"je", "jne"} }, { Sne, {"jne", "je"} },
+		{ Sgt, {"jg", "jle"} }, { Sge, {"jge", "jl"} },
+		{ Sltu, {"jb", "jae"} },{ Sleu, {"jbe", "ja"} },{ Sgtu, {"ja", "jbe"} },{ Sgeu, {"jae", "jb"} }};
+
 	std::map<Block *, size_t> mapBlocks;
 	for (size_t i = 0; i < vBlocks.size(); i++)
 		mapBlocks.insert({ vBlocks[i], i });
@@ -282,15 +287,34 @@ void CodeGeneratorBasic::translateBlocks(const std::vector<MxIR::Block *> &vBloc
 				assert(i == --block->ins.end());
 				size_t trueIdx = mapBlocks.find(block->brTrue.get())->second;
 				size_t falseIdx = mapBlocks.find(block->brFalse.get())->second;
-				translateIns(*i);
-				if (trueIdx == idx + 1)
-					writeCode("jz .L", cntLocalLabel + falseIdx);
-				else if (falseIdx == idx + 1)
-					writeCode("jnz .L", cntLocalLabel + trueIdx);
+
+				if (!i->src1.isReg())
+				{
+					assert(block->ins.size() >= 2 && mapInsCmp.count(std::prev(i)->oper));
+					std::string pos = mapInsCmp.find(std::prev(i)->oper)->second.first;
+					std::string neg = mapInsCmp.find(std::prev(i)->oper)->second.second;
+					if (trueIdx == idx + 1)
+						writeCode(neg, " .L", cntLocalLabel + falseIdx);
+					else if (falseIdx == idx + 1)
+						writeCode(pos, " .L", cntLocalLabel + trueIdx);
+					else
+					{
+						writeCode(neg, " .L", cntLocalLabel + falseIdx);
+						writeCode("jmp .L", cntLocalLabel + trueIdx);
+					}
+				}
 				else
 				{
-					writeCode("jz .L", cntLocalLabel + falseIdx);
-					writeCode("jmp .L", cntLocalLabel + trueIdx);
+					translateIns(*i);
+					if (trueIdx == idx + 1)
+						writeCode("jz .L", cntLocalLabel + falseIdx);
+					else if (falseIdx == idx + 1)
+						writeCode("jnz .L", cntLocalLabel + trueIdx);
+					else
+					{
+						writeCode("jz .L", cntLocalLabel + falseIdx);
+						writeCode("jmp .L", cntLocalLabel + trueIdx);
+					}
 				}
 				break;
 			}

@@ -2,6 +2,7 @@
 #include "CodeGenerator.h"
 #include "RegisterAllocatorSSA.h"
 #include "ASM.h"
+#include "InstructionSelect.h"
 using namespace MxIR;
 
 const std::vector<int> CodeGenerator::regCallerSave = { 0, 10, 11, 7, 6, 2, 1, 8, 9 };	//rax r10 r11 rdi rsi rdx rcx r8 r9
@@ -38,6 +39,9 @@ void CodeGenerator::generateFunc(MxProgram::funcInfo &finfo, const std::string &
 		std::copy(regCalleeSave.begin(), regCalleeSave.end(), std::back_inserter(regList));
 	}
 	
+	InstructionSelect is(*func);
+	is.work();
+
 	regularizeInsnPre();
 	initFuncEntryExit();
 	setRegisterConstrains();
@@ -544,11 +548,6 @@ void CodeGenerator::translateIns(Instruction ins)
 		writeCode("ret");
 		return;
 	}
-	if (ins.oper == Br)
-	{
-		writeCode("test ", getOperand(ins.src1), ", ", getOperand(ins.src1));
-		return;
-	}
 	if (ins.oper == TestZero)
 	{
 		assert(ins.src1.isReg());
@@ -564,7 +563,15 @@ void CodeGenerator::translateIns(Instruction ins)
 	if (mapInsCmp.count(ins.oper))
 	{
 		writeCode("cmp ", getOperand(ins.src1), ", ", getOperand(ins.src2));
-		writeCode(mapInsCmp.find(ins.oper)->second, " ", getOperand(ins.dst));
+		if(ins.dst.isReg())
+			writeCode(mapInsCmp.find(ins.oper)->second, " ", getOperand(ins.dst));
+		return;
+	}
+
+	if (ins.oper == Br)
+	{
+		if(ins.src1.isReg())
+			writeCode("test ", getOperand(ins.src1), ", ", getOperand(ins.src1));
 		return;
 	}
 
