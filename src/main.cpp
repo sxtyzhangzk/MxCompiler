@@ -16,6 +16,7 @@
 #include "LoopInvariantOptimizer.h"
 #include "DeadCodeElimination.h"
 #include "GVN.h"
+#include "LoadCombine.h"
 using namespace std;
 
 int compile(const std::string &fileName, const std::string &output)
@@ -78,6 +79,12 @@ int compile(const std::string &fileName, const std::string &output)
 				{
 					MxIR::GVN optim(func.content);
 					optim.work();
+
+					MxIR::LoadCombine loadcombine(func.content);
+					loadcombine.work();
+
+					MxIR::GVN optim2(func.content);
+					optim2.work();
 				}
 			}
 			if (CompileFlags::getInstance()->optim_dead_code)

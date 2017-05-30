@@ -115,10 +115,14 @@ namespace MxIR
 		//used in set/map of Operand
 		bool operator<(const Operand &rhs) const
 		{
-			assert(isReg() && rhs.isReg());
-			if (val == rhs.val)
-				return ver < rhs.ver;
-			return val < rhs.val;
+			//assert(isReg() && rhs.isReg());
+			if (type == rhs.type || isReg() && rhs.isReg())
+			{
+				if (val == rhs.val)
+					return ver < rhs.ver;
+				return val < rhs.val;
+			}
+			return type < rhs.type;
 		}
 	};
 	//NOTE: when writing one part of the 64-bit register, the value in the other part of the register is UNDEFINED

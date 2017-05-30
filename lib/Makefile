@@ -2,8 +2,8 @@ CFLAGS_O2 := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -O2 -DNDEBUG
 CFLAGS := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -O1 -DNDEBUG
 CFLAGS_O0 := -Isrc/ -Igenerated/ -Iinclude/ -std=c++14 -DNDEBUG
 
-mxcompiler: libantlr4-runtime.a antlr_generated.a libboost_program_options.a common_headers.h.gch option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o DeadCodeElimination.o GlobalSymbol.o GVN.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoopDetector.o LoopInvariantOptimizer.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o CycleEquiv.o DomTree.o MaxClique.o
-	g++ option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o DeadCodeElimination.o GlobalSymbol.o GVN.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoopDetector.o LoopInvariantOptimizer.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o CycleEquiv.o DomTree.o MaxClique.o antlr_generated.a libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
+mxcompiler: libantlr4-runtime.a antlr_generated.a libboost_program_options.a common_headers.h.gch option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o DeadCodeElimination.o GlobalSymbol.o GVN.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoadCombine.o LoopDetector.o LoopInvariantOptimizer.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o CycleEquiv.o DomTree.o MaxClique.o
+	g++ option_parser.o ASM_x64.o AST.o ASTConstructor.o CodeGenerator.o CodeGeneratorBasic.o ConstantFold.o DeadCodeElimination.o GlobalSymbol.o GVN.o InlineOptimizer.o IR.o IRGenerator.o IssueCollector.o LoadCombine.o LoopDetector.o LoopInvariantOptimizer.o main.o MxBuiltin.o MxProgram.o RegisterAllocatorSSA.o SSAConstructor.o SSAReconstructor.o StaticTypeChecker.o CycleEquiv.o DomTree.o MaxClique.o antlr_generated.a libantlr4-runtime.a libboost_program_options.a -o mxcompiler 
 
 common_headers.h.gch: ../src/common_headers.h
 	g++ ../src/common_headers.h -o common_headers.h.gch $(CFLAGS)
@@ -34,6 +34,8 @@ IRGenerator.o: ../src/IRGenerator.cpp
 	g++ -c ../src/IRGenerator.cpp -o IRGenerator.o $(CFLAGS)
 IssueCollector.o: ../src/IssueCollector.cpp
 	g++ -c ../src/IssueCollector.cpp -o IssueCollector.o $(CFLAGS_O0)
+LoadCombine.o: ../src/LoadCombine.cpp
+	g++ -c ../src/LoadCombine.cpp -o LoadCombine.o $(CFLAGS)
 LoopDetector.o: ../src/LoopDetector.cpp
 	g++ -c ../src/LoopDetector.cpp -o LoopDetector.o $(CFLAGS)
 LoopInvariantOptimizer.o: ../src/LoopInvariantOptimizer.cpp
