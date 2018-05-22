@@ -412,6 +412,12 @@ namespace MxIR
 		if (pred->brFalse.get() == inBlock.get())
 			pred->brFalse = tmpBlock;
 
+		std::shared_ptr<Block> dummyBlockAfterOut(Block::construct());
+		pstParent->blocks.insert(dummyBlockAfterOut.get());
+		dummyBlockAfterOut->pstNode = pstParent;
+		dummyBlockAfterOut->ins = { IRJump() };
+		dummyBlockAfterOut->brTrue = parent.insertPoint->brTrue;
+
 		for (auto &kv : next->phi)
 			for (auto &src : kv.second.srcs)
 				if (src.second.lock().get() == node->outBlock)
@@ -420,16 +426,19 @@ namespace MxIR
 		for (auto &kv : parent.insertPoint->brTrue->phi)
 			for (auto &src : kv.second.srcs)
 				if (src.second.lock().get() == parent.insertPoint)
-					src.second = node->outBlock->self;
+					src.second = dummyBlockAfterOut;
+					//src.second = node->outBlock->self;
 
 		for (auto &kv : node->inBlock->phi)
 			for (auto &src : kv.second.srcs)
 				if (src.second.lock().get() == pred)
 					src.second = parent.insertPoint->self;
 
-		next = parent.insertPoint->brTrue;
+		// next = parent.insertPoint->brTrue;
+		next = dummyBlockAfterOut;
 		parent.insertPoint->brTrue = inBlock;
 		// parent.insertPoint = node->outBlock;
+		parent.insertPoint = dummyBlockAfterOut.get();
 
 		std::function<void(PSTNode *)> dfs;
 		dfs = [&dfs, this](PSTNode *node)
