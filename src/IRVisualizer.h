@@ -13,7 +13,7 @@ public:
 	std::string toString(const MxIR::Instruction &ins, bool isHTML);
 	std::string toString(const MxIR::Block &block, bool isHTML);
 	std::string toHTML(const MxIR::Block &block, int flag, const std::string &funcName);	//flag: 1 for in block, 2 for out block
-	void print(const MxIR::Function &func, const std::string &funcName);
+	void print(const MxIR::Function &func, const std::string &funcName, bool noPST = false);
 	void printHead() { out << "digraph mxprog {" << std::endl; }
 	void printFoot() { out << "}" << std::endl; }
 	void reset() { cntBlock = 0; }

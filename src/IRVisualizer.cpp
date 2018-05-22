@@ -242,7 +242,7 @@ std::string IRVisualizer::toHTML(const Block &block, int flag, const std::string
 	return ret;
 }
 
-void IRVisualizer::print(const Function &func, const std::string &funcName)
+void IRVisualizer::print(const Function &func, const std::string &funcName, bool noPST)
 {
 	if (!func.inBlock)
 		return;
@@ -256,7 +256,7 @@ void IRVisualizer::print(const Function &func, const std::string &funcName)
 		return true;
 	});
 
-	if (func.pstRoot)
+	if (func.pstRoot && !noPST)
 	{
 		std::function<void(PSTNode *)> dfs;
 		dfs = [&](PSTNode *node)

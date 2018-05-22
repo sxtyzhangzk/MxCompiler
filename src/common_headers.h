@@ -21,5 +21,6 @@
 #include <algorithm>
 #include <utility>
 #include <cstdint>
+#include <cmath>
 
 #include <functional>

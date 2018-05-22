@@ -1,6 +1,7 @@
 #include "common_headers.h"
 #include "LoopInvariantOptimizer.h"
 #include "LoopDetector.h"
+#include "IRVisualizer.h"
 
 namespace MxIR
 {
@@ -29,8 +30,18 @@ namespace MxIR
 				loopID.insert(std::make_pair(block, i));
 		}
 
+		//static size_t count = 0;
+		
 		for (loop &lp : loops)
 		{
+			/*count++;
+			std::ofstream loptim_tmp("loop_" + std::to_string(count) + ".graph");
+			IRVisualizer irv(loptim_tmp);
+			irv.printHead();
+			irv.print(func, "function", true);
+			irv.printFoot();
+			loptim_tmp.close();*/
+
 			mapVar.clear();
 			mapRegion.clear();
 			failedVar.clear();
@@ -418,7 +429,7 @@ namespace MxIR
 
 		next = parent.insertPoint->brTrue;
 		parent.insertPoint->brTrue = inBlock;
-		parent.insertPoint = node->outBlock;
+		// parent.insertPoint = node->outBlock;
 
 		std::function<void(PSTNode *)> dfs;
 		dfs = [&dfs, this](PSTNode *node)
