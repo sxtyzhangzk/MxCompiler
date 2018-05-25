@@ -90,6 +90,7 @@ public:
 	bool optim_loop_invariant = false;
 	bool optim_dead_code = false;
 	bool optim_gvn = false;
+	bool gvn_strict_equal = false;
 	int inline_param = 1000, inline_param2 = 25;
 
 	static CompileFlags * getInstance()

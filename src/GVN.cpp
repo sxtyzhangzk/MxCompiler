@@ -114,7 +114,11 @@ namespace MxIR
 		const std::vector<std::shared_ptr<ValueNode>> &varValue, ValueImm immValue) : 
 		ValueNode(OperCommAssoc, length), oper(oper), varValue(varValue), immValue(immValue)
 	{
-		std::sort(this->varValue.begin(), this->varValue.end());
+		std::sort(this->varValue.begin(), this->varValue.end(), 
+			[](std::shared_ptr<GVN::ValueNode> lhs, std::shared_ptr<GVN::ValueNode> rhs)
+		{
+			return lhs->hash < rhs->hash;
+		});
 
 		hash.process(oper);
 		for (auto &node : this->varValue)
@@ -637,19 +641,19 @@ namespace MxIR
 		{
 			ValueHash &hash = kv.second->hash;
 			if (hash2group.count(hash))
-			{
-				if (opNumber[*varGroups[hash2group[hash]].begin()]->equal(*kv.second))
+			{		
+				if (CompileFlags::getInstance()->gvn_strict_equal)
 				{
-					groupID[kv.first] = hash2group[hash];
-					varGroups[groupID[kv.first]].insert(kv.first);
-					continue;
+					if (!opNumber[*varGroups[hash2group[hash]].begin()]->equal(*kv.second))
+					{
+						std::cerr << "WARNING: Found a collision of hash: ";
+						hash.printHash(std::cerr);
+						std::cerr << std::endl;
+					}
 				}
-				else
-				{
-					std::cerr << "WARNING: Found a collision of hash: ";
-					hash.printHash(std::cerr);
-					std::cerr << std::endl;
-				}
+				groupID[kv.first] = hash2group[hash];
+				varGroups[groupID[kv.first]].insert(kv.first);
+				continue;
 			}
 			else
 				hash2group[hash] = varGroups.size();
