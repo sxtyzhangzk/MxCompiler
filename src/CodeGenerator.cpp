@@ -228,7 +228,7 @@ void CodeGenerator::setRegisterConstrains()
 void CodeGenerator::setRegisterPrefer()
 {
 	static const std::set<Operation> preferAny = {Add, Mult, And, Or, Xor, Neg, Not, Move };
-	static const std::set<Operation> preferFirst = { Sub, Shlu, Shru, Shl, Shr };
+	static const std::set<Operation> preferFirst = { Sub, Shlu, Shru, Shl, Shr, ParallelMove };
 	func->inBlock->traverse([](Block *block) -> bool
 	{
 		for (auto &ins : block->ins)
