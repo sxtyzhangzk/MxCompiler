@@ -1,5 +1,6 @@
 #include "common_headers.h"
 #include "GVN.h"
+#include "utils/DispatchLength.h"
 #include <boost/uuid/sha1.hpp>
 
 namespace MxIR
@@ -138,6 +139,39 @@ namespace MxIR
 		hash.cacluateHash();
 	}
 
+	std::uint64_t GVN::ValueBinary::calculate(std::uint64_t val1, size_t length1, Operator oper, std::uint64_t val2, size_t length2, size_t lengthResult)
+	{
+		bool sign = !(oper == Shlu || oper == Shru || oper == Sltu);
+		return dispatch_length([oper](auto lhs, auto rhs, auto result) -> uint64_t
+		{
+			decltype(result) r;
+			switch (oper)
+			{
+			case Div:
+				r = lhs / (rhs != 0 ? rhs : 1);
+				break;
+			case Mod:
+				r = lhs % (rhs != 0 ? rhs : 1);
+				break;
+			case Shl: case Shlu:
+				r = lhs << rhs;
+				break;
+			case Shr: case Shru:
+				r = lhs >> rhs;
+				break;
+			case Seq:
+				r = lhs == rhs;
+				break;
+			case Slt: case Sltu:
+				r = lhs < rhs;
+				break;
+			default:
+				assert(false);
+			}
+			return (uint64_t)r;
+		}, val1, length1, sign, val2, length2, sign, 0, lengthResult, sign);
+	}
+
 	GVN::ValueUnary::ValueUnary(Operator oper, size_t length, std::shared_ptr<ValueNode> operand) :
 		ValueNode(OperUnary, length), oper(oper), operand(operand)
 	{
@@ -173,7 +207,7 @@ namespace MxIR
 		hash.cacluateHash();
 	}
 
-	std::uint64_t GVN::ValueCommAssoc::caculate(std::uint64_t val1, Operator oper, std::uint64_t val2)
+	std::uint64_t GVN::ValueCommAssoc::calculate(std::uint64_t val1, Operator oper, std::uint64_t val2)
 	{
 		switch (oper)
 		{
@@ -331,6 +365,19 @@ namespace MxIR
 					return reduceValue(new ValueUnary(ValueUnary::NotBool, binary->length, val));
 				}
 			}
+			else
+			{
+				// Constant Fold
+				ValueImm *immL = dynamic_cast<ValueImm *>(binary->valueL.get());
+				ValueImm *immR = dynamic_cast<ValueImm *>(binary->valueR.get());
+				if (immL && immR)
+				{
+					return std::shared_ptr<ValueNode>(new ValueImm(ImmSize(
+						ValueBinary::calculate(immL->val, immL->length, binary->oper, immR->val, immR->length, binary->length),
+						binary->length)
+					));
+				}
+			}
 		}
 		return value;
 	}
@@ -434,7 +481,7 @@ namespace MxIR
 					else
 					{
 						std::copy(childCA->varValue.begin(), childCA->varValue.end(), std::back_inserter(varVal));
-						immVal = ValueCommAssoc::caculate(immVal, oper, childCA->immValue.val);
+						immVal = ValueCommAssoc::calculate(immVal, oper, childCA->immValue.val);
 					}
 				}
 				else if (ValueImm *child = dynamic_cast<ValueImm *>(operand->get()))
@@ -442,7 +489,7 @@ namespace MxIR
 					if (insn.oper == Sub && operand == &oper2)
 						immVal -= child->val;
 					else
-						immVal = ValueCommAssoc::caculate(immVal, oper, child->val);
+						immVal = ValueCommAssoc::calculate(immVal, oper, child->val);
 				}
 				else
 				{
