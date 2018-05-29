@@ -180,6 +180,33 @@ namespace MxIR
 		hash.cacluateHash();
 	}
 
+	std::uint64_t GVN::ValueUnary::calculate(std::uint64_t val, size_t length, Operator oper, size_t lengthResult)
+	{
+		return dispatch_length([oper](auto operand, auto result) -> uint64_t
+		{
+			decltype(result) r;
+			switch (oper)
+			{
+			case Not:
+				r = ~operand;
+				break;
+			case Neg:
+				r = -operand;
+				break;
+			case Sext: case Zext:
+				r = operand;
+				break;
+			case NotBool:
+				r = !operand;
+				break;
+			default:
+				assert(false);
+			}
+			return (uint64_t)r;
+		}, val, length, oper != Zext, 0, lengthResult, oper != Zext);
+	}
+
+
 	GVN::ValueFuncCall::ValueFuncCall(size_t length, size_t funcID, const std::vector<std::shared_ptr<ValueNode>> &params) :
 		ValueNode(OperFuncCall, length), funcID(funcID), params(params)
 	{
@@ -335,6 +362,13 @@ namespace MxIR
 						unaryOperand->varValue,
 						ValueImm(ImmSize(~unaryOperand->immValue.val, unaryOperand->immValue.length))));
 				}
+			}
+			else if (ValueImm *imm = dynamic_cast<ValueImm *>(unary->operand.get()))
+			{
+				return std::shared_ptr<ValueNode>(new ValueImm(ImmSize(
+					ValueUnary::calculate(imm->val, imm->length, unary->oper, unary->length),
+					unary->length)
+				));
 			}
 		}
 		else if (ValuePhiIf *phi = dynamic_cast<ValuePhiIf *>(value.get()))

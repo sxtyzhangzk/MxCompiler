@@ -143,8 +143,6 @@ namespace MxIR
 			virtual bool equal(ValueNode &rhs) override { return equal_impl(*this, rhs, &ValueBinary::oper, &ValueBinary::valueL, &ValueBinary::valueR); }
 
 			static std::uint64_t calculate(std::uint64_t val1, size_t length1, Operator oper, std::uint64_t val2, size_t length2, size_t lengthResult);
-
-
 		};
 		struct ValueUnary : public ValueNode
 		{
@@ -154,6 +152,8 @@ namespace MxIR
 
 			ValueUnary(Operator oper, size_t length, std::shared_ptr<ValueNode> operand);
 			virtual bool equal(ValueNode &rhs) override { return equal_impl(*this, rhs, &ValueUnary::oper, &ValueUnary::operand); }
+
+			static std::uint64_t calculate(std::uint64_t val, size_t length, Operator oper, size_t lengthResult);
 		};
 		struct ValueFuncCall : public ValueNode
 		{
