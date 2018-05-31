@@ -365,6 +365,7 @@ namespace MxIR
 			}
 			else if (ValueImm *imm = dynamic_cast<ValueImm *>(unary->operand.get()))
 			{
+				// Constant Fold
 				return std::shared_ptr<ValueNode>(new ValueImm(ImmSize(
 					ValueUnary::calculate(imm->val, imm->length, unary->oper, unary->length),
 					unary->length)

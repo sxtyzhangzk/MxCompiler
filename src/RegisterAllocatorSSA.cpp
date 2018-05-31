@@ -676,8 +676,26 @@ namespace MxIR
 			while (W.size() > maxReg)
 			{
 				std::pop_heap(W.begin(), W.end(), cmpVarUse);
-				if(!varUse[W.back()].empty())
-					block->ins.insert(pos, getSpillInsn(W.back()));
+				if (!varUse[W.back()].empty())
+				{
+					// Spill the register as early as possible
+					auto iterInsert = pos;
+					for (; iterInsert != block->ins.begin(); --iterInsert)
+					{
+						bool regInUse = false;
+						for (Operand *operand : join<Operand *>(std::prev(iterInsert)->getInputReg(), std::prev(iterInsert)->getOutputReg()))
+						{
+							if (operand->val == W.back())
+							{
+								regInUse = true;
+								break;
+							}
+						}
+						if (regInUse)
+							break;
+					}
+					block->ins.insert(iterInsert, getSpillInsn(W.back()));
+				}
 				W.pop_back();
 			}
 		};
