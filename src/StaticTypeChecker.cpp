@@ -645,7 +645,8 @@ ASTNode * StaticTypeChecker::leave(MxAST::ASTExprFuncCall *expr)
 		expr->exprType = finfo.retType;
 		if (finfo.retType.mainType == MxType::String || finfo.retType.mainType == MxType::Object || finfo.retType.arrayDim > 0)
 			expr->vType = xvalue;
-		program->vFuncs[curFunc].dependency.insert(funcID);
+		if(curFunc != -1)
+			program->vFuncs[curFunc].dependency.insert(funcID);
 	}
 	if(!matched)
 		issues->error(expr->tokenL, expr->tokenR,
